@@ -1,0 +1,17 @@
+{
+  "name": "CITT Connect — Red Nacional CITT Duoc UC",
+  "short_name": "CITT Connect",
+  "description": "Credencial Digital QR/NFC y Red de Colaboración Inter-Sedes para los CITT de Duoc UC en Chile.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#FFB800",
+  "icons": [
+    {
+      "src": "/assets/citt-logo.webp",
+      "sizes": "1254x1254",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}
