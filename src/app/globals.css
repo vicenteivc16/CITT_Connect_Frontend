@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root,
+html[data-theme="light"],
+.light {
+  color-scheme: light;
+  --citt-bg-canvas: #FFFFFF;
+  --citt-bg-section: #EEEEEE;
+  --citt-bg-surface: #FFFFFF;
+  --citt-bg-subtle: #EEEEEE;
+  --citt-bg-elevated: #EEEEEE;
+  --citt-bg-inverse: #1A1A1A;
+  --citt-badge-bg: #EEEEEE;
+  --citt-badge-text: #1A1A1A;
+  --citt-badge-border: rgba(26, 26, 26, 0.22);
+  --citt-text-primary: #1A1A1A;
+  --citt-text-secondary: #525252;
+  --citt-text-inverse: #FFFFFF;
+  --citt-accent: #FFB800;
+  --citt-accent-blue: #307FE2;
+  --citt-border: rgba(26, 26, 26, 0.15);
+  --citt-border-strong: rgba(26, 26, 26, 0.30);
+  --citt-shadow-card: 0 14px 34px rgba(26, 26, 26, 0.08);
+}
+
+html.dark,
+html[data-theme="dark"],
+.dark {
+  color-scheme: dark;
+  --citt-bg-canvas: #000000;
+  --citt-bg-section: #121212;
+  --citt-bg-surface: #1A1A1A;
+  --citt-bg-subtle: #141414;
+  --citt-bg-elevated: #000000;
+  --citt-bg-inverse: #FFFFFF;
+  --citt-badge-bg: #1A1A1A;
+  --citt-badge-text: #FFFFFF;
+  --citt-badge-border: rgba(238, 238, 238, 0.24);
+  --citt-text-primary: #FFFFFF;
+  --citt-text-secondary: #EEEEEE;
+  --citt-text-inverse: #1A1A1A;
+  --citt-accent: #FFB800;
+  --citt-accent-blue: #307FE2;
+  --citt-border: rgba(238, 238, 238, 0.16);
+  --citt-border-strong: rgba(238, 238, 238, 0.32);
+  --citt-shadow-card: 0 22px 52px rgba(0, 0, 0, 0.85);
+}
+
+html,
+body {
+  background-color: var(--citt-bg-canvas);
+  color: var(--citt-text-primary);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+::selection {
+  background-color: #FFB800;
+  color: #1A1A1A;
+}
+
+/* Custom themed scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--citt-bg-subtle);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #666666;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FFB800;
+}
