@@ -131,6 +131,8 @@ export interface CittProject {
   videoUrl?: string;
   coverImageUrl?: string;
   galleryImages?: string[];
+  isFeatured?: boolean;
+  featuredReason?: string;
   maturityStage?: ProjectMaturityStage;
   applicationMode?: ProjectApplicationMode;
   applicationQuestions?: ProjectQuestion[];

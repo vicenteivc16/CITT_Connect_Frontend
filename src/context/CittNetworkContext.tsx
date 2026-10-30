@@ -37,6 +37,7 @@ interface CittNetworkContextValue {
     appData: { answers?: Record<string, string>; note?: string }
   ) => { success: boolean; message: string };
   hasUserApplied: (projectId: string, username?: string) => boolean;
+  toggleFeaturedProject: (projectId: string) => void;
   addPost: (post: Omit<CittFeedPost, 'id' | 'createdAt'>) => void;
 }
 
@@ -334,6 +335,23 @@ export function CittNetworkProvider({
     );
   };
 
+  const toggleFeaturedProject = (projectId: string) => {
+    setProjects((prev) => {
+      const next = prev.map((p) => {
+        if (p.id === projectId || p.slug === projectId) {
+          return { ...p, isFeatured: !p.isFeatured };
+        }
+        return p;
+      });
+      try {
+        localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   const addPost = (postData: Omit<CittFeedPost, 'id' | 'createdAt'>) => {
     const newPost: CittFeedPost = {
       ...postData,
@@ -373,6 +391,7 @@ export function CittNetworkProvider({
         addProject,
         applyToProject,
         hasUserApplied,
+        toggleFeaturedProject,
         addPost,
       }}
     >

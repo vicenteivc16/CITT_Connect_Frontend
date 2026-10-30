@@ -567,6 +567,7 @@ export const INITIAL_PROJECTS: CittProject[] = [
       '/assets/citt-hero-lobby.webp',
       '/assets/banner-comunidad.webp',
     ],
+    isFeatured: true,
     maturityStage: 'prototipado',
     collaborators: [
       {

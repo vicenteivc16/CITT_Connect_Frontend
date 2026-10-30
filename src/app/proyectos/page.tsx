@@ -5,27 +5,24 @@ import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   ArrowRight,
-  Award,
   Building2,
   Check,
-  ChevronRight,
   ClipboardList,
   Compass,
-  ExternalLink,
-  Eye,
   FileText,
   Filter,
   Flame,
   HandHelping,
-  Laptop,
   Layers,
+  Lightbulb,
   MapPin,
   Play,
   Plus,
+  Rocket,
   RotateCcw,
   Search,
   Sparkles,
-  Tag,
+  Star,
   Users,
   Video,
   X,
@@ -106,7 +103,16 @@ const REGIONS = [
 type QuickTab = 'todos' | 'iniciativas' | 'ayuda' | 'colaboradores' | 'video';
 
 export default function InterCampusProjectsPage() {
-  const { projects, activeUser, addProject } = useCittNetwork();
+  const {
+    projects,
+    activeUser,
+    addProject,
+    toggleFeaturedProject,
+  } = useCittNetwork();
+
+  // Permisos para destacar: Core Dev o Personal Duoc
+  const canFeatureProjects =
+    activeUser.role === 'dev' || activeUser.role === 'personal_duoc';
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -248,30 +254,9 @@ export default function InterCampusProjectsPage() {
     selectedMaturity,
   ]);
 
-  // Live Metrics
-  const totalCampuses = CITT_CAMPUSES.length;
-  const totalProjects = projects.length;
-  const totalHelpRequests = useMemo(
-    () => projects.filter((p) => p.lookingForCollaborators).length,
-    [projects]
-  );
-  const totalPartnersInvolved = useMemo(() => {
-    let count = 0;
-    projects.forEach((p) => {
-      p.collaborators?.forEach((c) => {
-        if (c.role === 'partner') count++;
-      });
-    });
-    return Math.max(count, 3); // realistic baseline
-  }, [projects]);
-
-  // Spotlight Project (Top featured project: proj-pin-nfc or first)
+  // Spotlight Project: SOLO APARECE SI UN CORE DEV / ADMIN LO DESTACÓ
   const spotlightProject = useMemo(() => {
-    return (
-      projects.find((p) => p.id === 'proj-pin-nfc') ||
-      projects.find((p) => p.videoUrl) ||
-      projects[0]
-    );
+    return projects.find((p) => p.isFeatured === true);
   }, [projects]);
 
   // Active filters count
@@ -362,24 +347,24 @@ export default function InterCampusProjectsPage() {
   };
 
   return (
-    <div className="space-y-10 pb-16">
-      {/* 1. HERO CON MÉTRICAS EN VIVO & CTA */}
-      <section className="relative overflow-hidden rounded-3xl border border-theme bg-theme-surface p-6 sm:p-10 shadow-theme-card">
-        <div className="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
-          <div className="max-w-2xl space-y-3">
+    <div className="space-y-8 pb-16">
+      {/* 1. HERO INFORMATIVO & GUÍA SIMPLE DE 3 PASOS */}
+      <section className="relative overflow-hidden rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card">
+        {/* Cabecera del Hero */}
+        <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+          <div className="max-w-3xl space-y-2.5">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#FFB800]/30 bg-[#FFB800]/10 px-3 py-1 text-xs font-bold text-[#FFB800]">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Ecosistema Tecnológico Multi-Sede CITT Chile</span>
+              <span>Ecosistema de Innovación Colaborativa Duoc UC</span>
             </div>
 
-            <h1 className="text-balance text-3xl font-black tracking-tight text-theme-primary sm:text-4xl lg:text-5xl">
+            <h1 className="text-balance text-2xl font-black tracking-tight text-theme-primary sm:text-3xl lg:text-4xl">
               Hub de Proyectos & Convocatorias Inter-Sedes
             </h1>
 
             <p className="text-sm leading-relaxed text-theme-secondary sm:text-base">
-              Propón iniciativas tecnológicas, suma tu especialidad a proyectos
-              de otras sedes y postula a convocatorias reales usando tu cuenta
-              institucional CITT Connect.
+              Espacio central para descubrir iniciativas tecnológicas, sumar tu especialidad
+              a proyectos de otras sedes y postular con tu cuenta institucional CITT Connect.
             </p>
           </div>
 
@@ -387,9 +372,9 @@ export default function InterCampusProjectsPage() {
             <Dialog.Trigger asChild>
               <button
                 type="button"
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#FFB800] px-6 py-4 text-sm font-black text-[#1A1A1A] shadow-md transition hover:bg-[#ffc633] hover:scale-[1.02] active:scale-[0.98]"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#FFB800] px-5 py-3.5 text-xs font-black text-[#1A1A1A] shadow-md transition hover:bg-[#ffc633] hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-4 w-4" />
                 <span>Proponer Proyecto / Pedir Ayuda</span>
               </button>
             </Dialog.Trigger>
@@ -399,7 +384,7 @@ export default function InterCampusProjectsPage() {
               <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[92vh] w-[94vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 text-theme-primary shadow-2xl focus:outline-none sm:p-8">
                 <div className="flex items-center justify-between border-b border-theme pb-4">
                   <div>
-                    <Dialog.Title className="text-lg font-black text-theme-primary">
+                    <Dialog.Title className="text-base font-black text-theme-primary">
                       Publicar Proyecto o Convocatoria CITT
                     </Dialog.Title>
                     <p className="text-xs text-theme-secondary">
@@ -410,7 +395,7 @@ export default function InterCampusProjectsPage() {
                     <button
                       type="button"
                       aria-label="Cerrar modal"
-                      className="rounded-xl p-2 text-theme-secondary hover:bg-theme-subtle hover:text-theme-primary"
+                      className="rounded-xl p-1.5 text-theme-secondary hover:bg-theme-subtle hover:text-theme-primary"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -506,9 +491,6 @@ export default function InterCampusProjectsPage() {
                         className="w-full rounded-xl border border-theme bg-theme-subtle py-2.5 pr-3.5 pl-10 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
                       />
                     </div>
-                    <p className="mt-1 text-[11px] text-theme-secondary">
-                      Permite a los evaluadores ver el funcionamiento sin abandonar el ecosistema CITT.
-                    </p>
                   </div>
 
                   {/* Documentación Técnica README.md */}
@@ -567,7 +549,7 @@ export default function InterCampusProjectsPage() {
                   {/* Modalidad de Postulación */}
                   <div className="rounded-2xl border border-theme bg-theme-subtle p-4">
                     <p className="text-xs font-bold text-theme-primary">
-                      Modalidad de Postulación para Postulantes
+                      Modalidad de Postulación para Compañeros
                     </p>
                     <p className="text-[11px] text-theme-secondary mt-0.5">
                       Siempre se registrará la cuenta institucional autenticada de CITT Connect.
@@ -664,55 +646,53 @@ export default function InterCampusProjectsPage() {
           </Dialog.Root>
         </div>
 
-        {/* Barra de Métricas En Vivo */}
-        <div className="mt-8 grid grid-cols-2 gap-4 border-t border-theme pt-6 sm:grid-cols-4">
-          <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 sm:p-4">
-            <div className="flex items-center gap-2 text-theme-secondary">
-              <MapPin className="h-4 w-4 text-[#307FE2]" />
-              <span className="text-xs font-semibold">Sedes Duoc UC</span>
+        {/* Instrucción Básica: Cómo funciona en 3 pasos sencillos */}
+        <div className="mt-6 grid grid-cols-1 gap-3 border-t border-theme pt-6 sm:grid-cols-3">
+          <div className="flex items-start gap-3 rounded-2xl border border-theme bg-theme-subtle p-3.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#307FE2]/10 text-[#307FE2]">
+              <Search className="h-4 w-4" />
             </div>
-            <p className="mt-1 text-2xl font-black text-theme-primary">
-              {totalCampuses}
-            </p>
-            <p className="text-[11px] text-theme-secondary">Red CITT Nacional</p>
+            <div>
+              <p className="text-xs font-bold text-theme-primary">
+                1. Explora & Filtra
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-theme-secondary">
+                Busca por escuela, sede o tecnologías (IoT, IA, VR) y descubre qué se está construyendo.
+              </p>
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 sm:p-4">
-            <div className="flex items-center gap-2 text-theme-secondary">
-              <Layers className="h-4 w-4 text-[#FFB800]" />
-              <span className="text-xs font-semibold">Proyectos Activos</span>
+          <div className="flex items-start gap-3 rounded-2xl border border-theme bg-theme-subtle p-3.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#43B02A]/10 text-[#43B02A]">
+              <HandHelping className="h-4 w-4" />
             </div>
-            <p className="mt-1 text-2xl font-black text-theme-primary">
-              {totalProjects}
-            </p>
-            <p className="text-[11px] text-theme-secondary">En desarrollo & prototipos</p>
+            <div>
+              <p className="text-xs font-bold text-theme-primary">
+                2. Postula con tu Cuenta CITT
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-theme-secondary">
+                Únete a convocatorias abiertas en 1 clic o mediante formulario usando tu credencial institucional.
+              </p>
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 sm:p-4">
-            <div className="flex items-center gap-2 text-theme-secondary">
-              <HandHelping className="h-4 w-4 text-[#43B02A]" />
-              <span className="text-xs font-semibold">Convocatorias SOS</span>
+          <div className="flex items-start gap-3 rounded-2xl border border-theme bg-theme-subtle p-3.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFB800]/10 text-[#FFB800]">
+              <Rocket className="h-4 w-4" />
             </div>
-            <p className="mt-1 text-2xl font-black text-theme-primary">
-              {totalHelpRequests}
-            </p>
-            <p className="text-[11px] text-theme-secondary">Buscando compañeros</p>
-          </div>
-
-          <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 sm:p-4">
-            <div className="flex items-center gap-2 text-theme-secondary">
-              <Building2 className="h-4 w-4 text-[#AC4FC6]" />
-              <span className="text-xs font-semibold">Partners & Mentores</span>
+            <div>
+              <p className="text-xs font-bold text-theme-primary">
+                3. Lanza tu Iniciativa o Pide Ayuda
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-theme-secondary">
+                Publica un proyecto o solicita especialidades específicas para colaborar con alumnos de todo el país.
+              </p>
             </div>
-            <p className="mt-1 text-2xl font-black text-theme-primary">
-              {totalPartnersInvolved}
-            </p>
-            <p className="text-[11px] text-theme-secondary">AWS, Docentes & Empresas</p>
           </div>
         </div>
       </section>
 
-      {/* 2. SPOTLIGHT CARD (INICIATIVA ESTRELLA CITT) */}
+      {/* 2. PROYECTO DESTACADO (CONDICIONAL: SOLO SI UN CORE DEV LO MARCÓ COMO DESTACADO) */}
       {spotlightProject && !isFiltered && (
         <section className="relative overflow-hidden rounded-3xl border border-[#FFB800]/40 bg-theme-surface p-6 sm:p-8 shadow-theme-card">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
@@ -732,8 +712,8 @@ export default function InterCampusProjectsPage() {
               {/* Badges Superpuestos */}
               <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#FFB800] px-3 py-1 text-xs font-black text-[#1A1A1A] shadow-md">
-                  <Flame className="h-3.5 w-3.5 text-[#1A1A1A]" />
-                  <span>Destacado del Mes</span>
+                  <Star className="h-3.5 w-3.5 fill-[#1A1A1A] text-[#1A1A1A]" />
+                  <span>Destacado por Core Dev</span>
                 </span>
                 <SchoolBadge schoolSlug={spotlightProject.schoolSlug} />
               </div>
@@ -755,26 +735,41 @@ export default function InterCampusProjectsPage() {
 
             {/* Información & Contenido */}
             <div className="flex-1 space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {spotlightProject.maturityStage && (
-                  <span
-                    className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${
-                      MATURITY_CONFIG[spotlightProject.maturityStage].badgeClass
-                    }`}
-                  >
-                    {MATURITY_CONFIG[spotlightProject.maturityStage].label}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {spotlightProject.maturityStage && (
+                    <span
+                      className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${
+                        MATURITY_CONFIG[spotlightProject.maturityStage].badgeClass
+                      }`}
+                    >
+                      {MATURITY_CONFIG[spotlightProject.maturityStage].label}
+                    </span>
+                  )}
+                  <span className="rounded-full bg-[#307FE2]/10 border border-[#307FE2]/30 px-2.5 py-0.5 text-xs font-bold text-[#307FE2] uppercase">
+                    {spotlightProject.status.replace('_', ' ')}
                   </span>
+                </div>
+
+                {/* Control para Core Dev: Desmarcar destacado */}
+                {canFeatureProjects && (
+                  <button
+                    type="button"
+                    onClick={() => toggleFeaturedProject(spotlightProject.id)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-theme bg-theme-subtle px-2.5 py-1 text-[11px] font-semibold text-theme-secondary hover:text-red-500"
+                    title="Solo visible para Core Devs"
+                  >
+                    <X className="h-3 w-3" />
+                    <span>Quitar de Destacados</span>
+                  </button>
                 )}
-                <span className="rounded-full bg-[#307FE2]/10 border border-[#307FE2]/30 px-2.5 py-0.5 text-xs font-bold text-[#307FE2] uppercase">
-                  {spotlightProject.status.replace('_', ' ')}
-                </span>
               </div>
 
               <div>
-                <h2 className="text-2xl font-black text-theme-primary sm:text-3xl">
+                <h2 className="text-xl font-black text-theme-primary sm:text-2xl">
                   {spotlightProject.title}
                 </h2>
-                <p className="mt-2 text-sm leading-relaxed text-theme-secondary sm:text-base">
+                <p className="mt-2 text-xs leading-relaxed text-theme-secondary sm:text-sm">
                   {spotlightProject.summary}
                 </p>
               </div>
@@ -783,14 +778,14 @@ export default function InterCampusProjectsPage() {
               {spotlightProject.neededSpecialties &&
                 spotlightProject.neededSpecialties.length > 0 && (
                   <div className="space-y-1.5">
-                    <p className="text-xs font-bold text-theme-primary">
+                    <p className="text-[11px] font-bold text-theme-primary">
                       Perfiles & Especialidades en Convocatoria:
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {spotlightProject.neededSpecialties.map((spec) => (
                         <span
                           key={spec}
-                          className="rounded-lg border border-theme bg-theme-subtle px-2.5 py-1 text-xs font-medium text-theme-primary"
+                          className="rounded-lg border border-theme bg-theme-subtle px-2 py-0.5 text-xs font-medium text-theme-primary"
                         >
                           {spec}
                         </span>
@@ -836,7 +831,7 @@ export default function InterCampusProjectsPage() {
 
                 <Link
                   href={`/proyectos/${spotlightProject.slug || spotlightProject.id}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-4 py-2 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
                 >
                   <span>Más información</span>
                   <ArrowRight className="h-4 w-4" />
@@ -1100,14 +1095,40 @@ export default function InterCampusProjectsPage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/30" />
 
-                  {/* Overlays Superiores: Escuela y Sede */}
+                  {/* Overlays Superiores: Escuela, Sede y Control Core Dev */}
                   <div className="absolute top-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2">
                     <SchoolBadge schoolSlug={project.schoolSlug} />
 
-                    <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2.5 py-0.5 text-[11px] font-bold text-white backdrop-blur-md">
-                      <MapPin className="h-3 w-3 text-[#307FE2]" />
-                      <span>{campus.shortName}</span>
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {/* Botón para Core Devs: Marcar / Desmarcar Destacado */}
+                      {canFeatureProjects && (
+                        <button
+                          type="button"
+                          onClick={() => toggleFeaturedProject(project.id)}
+                          className={`rounded-full p-1 backdrop-blur-md transition ${
+                            project.isFeatured
+                              ? 'bg-[#FFB800] text-[#1A1A1A]'
+                              : 'border border-white/20 bg-black/60 text-white/80 hover:text-white'
+                          }`}
+                          title={
+                            project.isFeatured
+                              ? 'Proyecto Destacado (clic para quitar)'
+                              : 'Destacar como Proyecto Core Dev'
+                          }
+                        >
+                          <Star
+                            className={`h-3 w-3 ${
+                              project.isFeatured ? 'fill-[#1A1A1A]' : ''
+                            }`}
+                          />
+                        </button>
+                      )}
+
+                      <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2.5 py-0.5 text-[11px] font-bold text-white backdrop-blur-md">
+                        <MapPin className="h-3 w-3 text-[#307FE2]" />
+                        <span>{campus.shortName}</span>
+                      </span>
+                    </div>
                   </div>
 
                   {/* Overlays Inferiores: Badges de Capacidades */}
@@ -1142,7 +1163,7 @@ export default function InterCampusProjectsPage() {
                       href={`/proyectos/${project.slug || project.id}`}
                       className="group/title inline-block"
                     >
-                      <h3 className="text-lg font-black leading-snug text-theme-primary transition group-hover/title:text-[#307FE2]">
+                      <h3 className="text-base font-black leading-snug text-theme-primary transition group-hover/title:text-[#307FE2]">
                         {project.title}
                       </h3>
                     </Link>
