@@ -978,36 +978,68 @@ Buscamos estudiantes de Diseño de cualquier sede para ayudarnos a prototipar la
 
 export const INITIAL_POSTS: CittFeedPost[] = [
   {
+    id: 'post-lead-rover',
+    authorUsername: 'matias-alarcon',
+    authorName: 'Matías Alarcón Vergara',
+    authorRole: 'usuario_citt',
+    authorOccupation: 'Lead Track Robótica & Firmware · CITT Concepción',
+    campusSlug: 'concepcion',
+    category: 'noticia_citt',
+    title:
+      'Rover Forestal con Visión IA y Telemetría LoRaWAN Completa con Éxito Pruebas de Campo en Biobío',
+    subtitle:
+      'El prototipo autónomo desarrollado por estudiantes de Ingeniería e Informática de Duoc UC logró enlace de datos en tiempo real a 8 kilómetros sin red móvil en zonas cordilleranas.',
+    content:
+      'Tras seis meses de desarrollo multidisciplinario entre los talleres de hardware y software del CITT Sede Concepción, el equipo del Rover Autónomo de Monitoreo Forestal superó satisfactoriamente las pruebas de tracción en pendiente y detección térmica de focos de ignición mediante el algoritmo YOLOv8 embebido en un módulo Jetson Orin. La iniciativa ahora abre convocatoria inter-sedes para incorporar estudiantes de Diseño que optimicen la carcasa sellada y programadores frontend para conectar la telemetría a la red nacional CITT Connect.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80',
+    actionLabel: 'Ver ficha del proyecto y postular',
+    actionUrl: '/proyectos/rover-monitoreo-forestal-ia',
+    createdAt: 'Hace 2 horas',
+    isLeadStory: true,
+    readTime: '3 min de lectura',
+  },
+  {
     id: 'post-partner-1',
     authorUsername: 'javiera-mendez-aws',
-    authorName: 'Javiera Méndez Solar · AustralCloud',
+    authorName: 'Javiera Méndez Solar',
     authorRole: 'partner',
-    authorOccupation: 'Líder de Alianzas Universitarias (Partner Oficial)',
+    authorOccupation: 'Líder de Alianzas Cloud & Educación · AustralCloud',
     campusSlug: 'antonio-varas',
     category: 'oportunidad_partner',
     title:
-      'Convocatoria Abierta: 6 Cupos de Práctica y Mentoría Cloud & IA para Miembros CITT (Todas las Sedes)',
+      'Convocatoria Abierta: 6 Cupos de Práctica y Mentoría Cloud & IA para Miembros CITT de Todas las Sedes',
+    subtitle:
+      'AustralCloud lanza su programa semestral de inserción laboral con certificación AWS financiada para talentos destacados de Duoc UC.',
     content:
-      'En AustralCloud abrimos nuestra convocatoria semestral exclusiva para integrantes de los CITT de Duoc UC (modalidad híbrida o remota desde regiones). Buscamos perfiles con interés en Arquitectura Cloud, Desarrollo Full-Stack, Ciberseguridad o Automatización.',
-    actionLabel: 'Ver bases y postular con tu perfil CITT',
+      'En AustralCloud abrimos nuestra convocatoria semestral exclusiva para integrantes de los CITT de Duoc UC en modalidad híbrida o 100% remota desde cualquier región del país. Los estudiantes seleccionados participarán en células reales de arquitectura serverless, infraestructura cloud con Terraform y despliegue de modelos LLM. El proceso de postulación se gestiona directamente validando la credencial CITT Connect.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&w=800&q=80',
+    actionLabel: 'Postular a la pasantía con credencial CITT',
     actionUrl: '/u/javiera-mendez-aws',
-    createdAt: 'Hace 3 horas',
+    createdAt: 'Hace 4 horas',
+    readTime: '2 min de lectura',
   },
   {
     id: 'post-consejero-1',
     authorUsername: 'valentina-soto',
     authorName: 'Valentina Soto Lagos',
     authorRole: 'consejero_carrera',
-    authorOccupation: 'Consejera de Carrera · Escuela de Diseño',
+    authorOccupation: 'Consejera de Carrera · Escuela de Diseño Duoc UC',
     campusSlug: 'san-joaquin',
     category: 'puente_consejero',
     title:
-      'Puente Escuela de Diseño ↔ CITT: 14 alumnos de Diseño buscan sumarse a proyectos de software y robótica',
+      'Puente Escuela de Diseño ↔ CITT: 14 Alumnos de Diseño Gráfico e Industrial Buscan Sumarse a Equipos Tecnológicos',
+    subtitle:
+      'Iniciativa de integración estudiantil busca aportar diseño de interfaces de usuario, identidad visual y prototipado 3D a proyectos en desarrollo.',
     content:
-      'Como Consejera de Carrera en San Joaquín, reuní a un grupo de estudiantes de Diseño Gráfico e Industrial que aún no tienen cuenta en CITT Connect pero quieren diseñar interfaces, logos e imprimir carcasas 3D para los proyectos tecnológicos de cualquier sede.',
-    actionLabel: 'Contactar a Valentina para conectar equipos',
+      'Como Consejera de Carrera en Sede San Joaquín, articulé una mesa de trabajo con estudiantes de Diseño que desean sumarse a proyectos de software, IoT y robótica del CITT en cualquier sede de Chile. El objetivo es romper los silos académicos y demostrar que la tecnología de alto nivel requiere pensamiento de diseño, accesibilidad e interfaces intuitivas desde el día cero.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80',
+    actionLabel: 'Conectar con Valentina (Consejería)',
     actionUrl: '/u/valentina-soto',
     createdAt: 'Hace 1 día',
+    readTime: '3 min de lectura',
   },
   {
     id: 'post-lider-1',
@@ -1018,12 +1050,53 @@ export const INITIAL_POSTS: CittFeedPost[] = [
     campusSlug: 'vina-del-mar',
     category: 'evento_nacional',
     title:
-      'Torneo Inter-Sedes CTF Ciberseguridad 2026: Inscripciones abiertas por equipos mixtos entre sedes',
+      'Torneo Inter-Sedes CTF Ciberseguridad 2026: Inscripciones Abiertas para Escuadrones Mixtos de Duoc UC',
+    subtitle:
+      'Competencia nacional de hacking ético, criptografía y análisis forense digital con premios y servidores dedicados en la nube.',
     content:
-      'Este mes realizaremos el entrenamiento nacional Capture The Flag. Pueden armar escuadrones de hasta 4 integrantes combinando estudiantes de distintas sedes y carreras.',
-    actionLabel: 'Conectar con Camila (Organización CTF)',
+      'Este 14 y 15 de Noviembre realizaremos el entrenamiento nacional Capture The Flag (CTF). Los equipos pueden estar formados por hasta 4 integrantes combinando estudiantes de cualquier sede y nivel de carrera. Habrá retos para principiantes y categorías avanzadas de explotación de binarios y seguridad web.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=800&q=80',
+    actionLabel: 'Ver bases del torneo e inscribir equipo',
     actionUrl: '/u/camila-fuentes',
     createdAt: 'Hace 2 días',
+    readTime: '2 min de lectura',
+  },
+  {
+    id: 'post-sos-1',
+    authorUsername: 'francisca-navarro',
+    authorName: 'Francisca Navarro Pino',
+    authorRole: 'usuario_citt',
+    authorOccupation: 'Creadora XR & Fabricación Digital',
+    campusSlug: 'maipu',
+    category: 'pedir_ayuda',
+    title:
+      'Cable Urgente: Se solicita apoyo en modelado 3D de piezas mecánicas en Sede Maipú o Antonio Varas',
+    subtitle: 'Pieza de engranaje para soporte de visores VR.',
+    content:
+      'Estamos finalizando el simulador inmersivo de subestaciones eléctricas y necesitamos calibrar dos soportes ergonómicos en resina o filamento PETG. Si alguien en Santiago tiene disponibilidad en el taller de fabricación digital, por favor contactar directamente.',
+    actionLabel: 'Contactar a Francisca vía CITT',
+    actionUrl: '/u/francisca-navarro',
+    createdAt: 'Hace 5 horas',
+    readTime: '1 min de lectura',
+  },
+  {
+    id: 'post-sos-2',
+    authorUsername: 'vicente-vasquez',
+    authorName: 'Vicente Vásquez',
+    authorRole: 'dev',
+    authorOccupation: 'Lead Core Dev · CITT Connect',
+    campusSlug: 'concepcion',
+    category: 'pedir_ayuda',
+    title:
+      'Convocatoria Técnica: Búsqueda de Embajadores en Sedes para Pruebas del Pin Físico NFC 3D',
+    subtitle: 'Validación de lectura en iOS y Android en terreno.',
+    content:
+      'Buscamos representantes de las sedes Viña del Mar, San Joaquín, Plaza Oeste y Puerto Montt para recibir los primeros prototipos de pines impresos en 3D con chip NFC NTAG213 y testear el enlace instantáneo con la credencial digital de CITT Connect.',
+    actionLabel: 'Postular como Embajador de Sede',
+    actionUrl: '/proyectos/citt-connect-pin-nfc-3d',
+    createdAt: 'Hace 6 horas',
+    readTime: '1 min de lectura',
   },
 ];
 

@@ -48,7 +48,7 @@ const CittNetworkContext = createContext<CittNetworkContextValue | undefined>(
 const STORAGE_KEYS = {
   PROFILES: 'citt_connect_profiles_v4',
   PROJECTS: 'citt_connect_projects_v2',
-  POSTS: 'citt_connect_posts_v2',
+  POSTS: 'citt_connect_posts_v3',
   ACTIVE_USERNAME: 'citt_connect_active_user_v2',
   THEME: 'citt_connect_theme_v2',
   CONNECTIONS: 'citt_connect_connections_v2',

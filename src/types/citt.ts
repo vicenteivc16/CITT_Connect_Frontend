@@ -154,10 +154,14 @@ export interface CittFeedPost {
     | 'puente_consejero'
     | 'pedir_ayuda';
   title: string;
+  subtitle?: string;
   content: string;
+  imageUrl?: string;
   actionLabel?: string;
   actionUrl?: string;
   createdAt: string;
+  isLeadStory?: boolean;
+  readTime?: string;
 }
 
 export interface CittBlogArticle {
