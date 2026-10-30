@@ -711,8 +711,13 @@ Buscamos estudiantes y docentes de cualquier sede Duoc UC para colaborar en:
       'Necesitamos 1 estudiante de Diseño de cualquier sede para optimizar la carcasa resistente al polvo y 1 desarrollador frontend para el panel de telemetría en tiempo real.',
     repoUrl: 'https://github.com',
     videoUrl: 'https://www.youtube.com/watch?v=Sby1UkHAbxA',
-    coverImageUrl: '/assets/banner-iot.webp',
-    galleryImages: ['/assets/banner-iot.webp', '/assets/citt-hero-lobby.webp'],
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+    galleryImages: [
+      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+      '/assets/banner-iot.webp',
+      '/assets/citt-hero-lobby.webp',
+    ],
     maturityStage: 'pruebas_campo',
     collaborators: [
       {
@@ -795,8 +800,12 @@ Hemos completado las pruebas de tracción 4x4 en terrenos con pendiente de 25 gr
     ],
     helpRequestDetails:
       'Pedimos ayuda a compañeros de Ingeniería en Electricidad o Construcción de cualquier sede para validar el protocolo técnico dentro del simulador.',
-    coverImageUrl: '/assets/citt-hero-lobby.webp',
-    galleryImages: ['/assets/citt-hero-lobby.webp'],
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1592478411213-6153e4ebc07d?auto=format&fit=crop&w=800&q=80',
+    galleryImages: [
+      'https://images.unsplash.com/photo-1592478411213-6153e4ebc07d?auto=format&fit=crop&w=800&q=80',
+      '/assets/citt-hero-lobby.webp',
+    ],
     maturityStage: 'ideacion',
     collaborators: [
       {
@@ -832,6 +841,137 @@ Desarrollado en el laboratorio CITT Sede Maipú para apoyar la formación de té
 Este proyecto admite **Postulación Directa en 1 Clic**: tu cuenta institucional autenticada se vinculará automáticamente al registro de colaboradores de la iniciativa.
 `,
     createdAt: 'Hace 1 semana',
+  },
+  {
+    id: 'proj-telemedicina-vina',
+    slug: 'telemetria-cardiaca-iot-vina',
+    title: 'Dispositivo IoT de Telemetría Cardíaca para Salud Rural',
+    summary:
+      'Sensor wearable de bajo costo conectado vía Bluetooth Low Energy a smartphone para detección de arritmias, validado con la Escuela de Salud.',
+    status: 'finalizado',
+    leadUsername: 'valentina-soto',
+    leadName: 'Valentina Soto Miranda',
+    leadRole: 'consejero_carrera',
+    originCampusSlug: 'vina-del-mar',
+    schoolSlug: 'salud',
+    lookingForCollaborators: false,
+    neededSpecialties: [
+      'Validación Clínica',
+      'Desarrollo Mobile Flutter',
+      'Ciberseguridad en Salud',
+    ],
+    helpRequestDetails:
+      'Proyecto validado y transferido al Centro de Innovación en Salud. Documentación disponible para replicar en otras sedes.',
+    repoUrl: 'https://github.com/citt-duoc/telemedicina-iot',
+    videoUrl: 'https://www.youtube.com/watch?v=kYv_3jZf9oU',
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80',
+    galleryImages: [
+      'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80',
+      '/assets/banner-comunidad.webp',
+      '/assets/citt-hero-lobby.webp',
+    ],
+    maturityStage: 'transferencia',
+    collaborators: [
+      {
+        id: 'collab-tm1',
+        username: 'valentina-soto',
+        fullName: 'Valentina Soto Miranda',
+        role: 'consejero_carrera',
+        roleInProject: 'Líder de Proyecto & Consejera',
+        campusSlug: 'vina-del-mar',
+        schoolSlug: 'salud',
+      },
+      {
+        id: 'collab-tm2',
+        username: 'carlos-vega-docente',
+        fullName: 'Prof. Carlos Vega R.',
+        role: 'personal_duoc',
+        roleInProject: 'Docente Patrocinador & Asesor IoT',
+        campusSlug: 'concepcion',
+        schoolSlug: 'informatica',
+      },
+      {
+        id: 'collab-tm3',
+        username: 'javiera-mendez-aws',
+        fullName: 'Javiera Méndez Solar',
+        role: 'partner',
+        organization: 'AWS Cloud Chile',
+        roleInProject: 'Infraestructura Serverless & HIPAA',
+        campusSlug: 'antonio-varas',
+        schoolSlug: 'informatica',
+      },
+    ],
+    applicationMode: 'direct',
+    readmeContent: `# Dispositivo IoT de Telemetría Cardíaca para Salud Rural 🩺💓
+
+Iniciativa multidisciplinaria de Sede Viña del Mar (Escuela de Salud + Escuela de Informática).
+
+\`\`\`mermaid
+flowchart LR
+    A["Sensor ECG AD8232"] --> B["Microcontrolador ESP32-C3"]
+    B -->|BLE 5.0| C["App Móvil Flutter"]
+    C -->|AWS IoT Core| D["Panel Médico CITT"]
+\`\`\`
+
+Proyecto en **Fase 4: Transferencia Tecnológica** con patentes y validación ética aprobada.
+`,
+    createdAt: 'Hace 2 semanas',
+  },
+  {
+    id: 'proj-ayuda-esp32-varas',
+    slug: 'sos-carcasa-ergonomica-rfid',
+    title: 'Carcasa Ergonómica 3D para Lector RFID Accesible',
+    summary:
+      'Solicitud de ayuda técnica urgente a compañeros de Diseño para modelar e imprimir una carcasa resistente para personas con movilidad reducida.',
+    status: 'idea',
+    leadUsername: 'camila-soto',
+    leadName: 'Camila Soto',
+    leadRole: 'lider_citt',
+    originCampusSlug: 'antonio-varas',
+    schoolSlug: 'diseno',
+    lookingForCollaborators: true,
+    neededSpecialties: [
+      'Modelado 3D en Blender/Fusion360',
+      'Impresión en Resina / PLA',
+      'Ergonomía & Accesibilidad',
+    ],
+    helpRequestDetails:
+      'Tenemos el circuito RFID funcionando pero requerimos apoyo de estudiantes de Diseño Industrial para fabricar 5 carcasas ergonómicas.',
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=800&q=80',
+    galleryImages: [
+      'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=800&q=80',
+      '/assets/banner-iot.webp',
+    ],
+    maturityStage: 'ideacion',
+    collaborators: [
+      {
+        id: 'collab-sos1',
+        username: 'camila-soto',
+        fullName: 'Camila Soto',
+        role: 'lider_citt',
+        roleInProject: 'Capitana CITT Sede Varas',
+        campusSlug: 'antonio-varas',
+        schoolSlug: 'diseno',
+      },
+    ],
+    applicationMode: 'form',
+    applicationQuestions: [
+      {
+        id: 'q1',
+        question: '¿Manejas Fusion 360, SolidWorks o Blender para exportar archivos STL/STEP?',
+        placeholder: 'Indica tu nivel y software...',
+        required: true,
+      },
+    ],
+    readmeContent: `# Carcasa Ergonómica 3D para Lector RFID Inclusivo ♿🦾
+
+> **Solicitud de Ayuda Técnica Inter-Sedes CITT**
+
+Buscamos estudiantes de Diseño de cualquier sede para ayudarnos a prototipar la carcasa accesible.
+`,
+    createdAt: 'Hace 3 días',
   },
 ];
 
