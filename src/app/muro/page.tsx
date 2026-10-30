@@ -101,13 +101,18 @@ export default function NationalGazettePage() {
 
   // Breaking news ticker items
   const tickerItems = useMemo(() => {
-    return posts.slice(0, 4).map((p) => ({
+    return posts.slice(0, 6).map((p) => ({
       id: p.id,
       title: p.title,
       campus: getCampusBySlug(p.campusSlug).shortName,
       category: CATEGORY_META[p.category].sectionName,
     }));
   }, [posts]);
+
+  // Duplicar para loop continuo sin saltos visuales
+  const marqueeItems = useMemo(() => {
+    return [...tickerItems, ...tickerItems];
+  }, [tickerItems]);
 
   // Filtering posts by desk, campus and search
   const filteredPosts = useMemo(() => {
@@ -440,24 +445,42 @@ export default function NationalGazettePage() {
           </div>
         </div>
 
-        {/* Cintillo / Ticker de Último Minuto */}
-        <div className="flex items-center gap-3 overflow-hidden rounded-2xl border border-theme bg-theme-subtle p-2.5">
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#FFB800] px-3 py-1 text-xs font-black text-[#1A1A1A] shadow-sm">
+        {/* Cintillo / Ticker de Último Minuto con Desplazamiento Infinito */}
+        <div className="relative flex items-center gap-3 overflow-hidden rounded-2xl border border-theme bg-theme-subtle p-2.5">
+          <span className="relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#FFB800] px-3 py-1 text-xs font-black text-[#1A1A1A] shadow-sm">
             <Flame className="h-3.5 w-3.5 text-[#1A1A1A]" />
             <span>ÚLTIMO MINUTO</span>
           </span>
 
-          <div className="flex items-center gap-6 overflow-x-auto text-xs whitespace-nowrap">
-            {tickerItems.map((item, idx) => (
-              <span key={item.id} className="inline-flex items-center gap-2">
-                <span className="font-bold text-[#307FE2]">[{item.category}]</span>
-                <span className="text-theme-primary">{item.title}</span>
-                <span className="text-[10px] text-theme-secondary">({item.campus})</span>
-                {idx < tickerItems.length - 1 && (
-                  <span className="text-theme-secondary/40">·</span>
-                )}
-              </span>
-            ))}
+          {/* Gradientes laterales de desvanecimiento para entrada y salida suave */}
+          <div className="pointer-events-none absolute top-0 bottom-0 left-[142px] z-10 w-6 bg-gradient-to-r from-theme-subtle to-transparent" />
+          <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-theme-subtle to-transparent" />
+
+          {/* Track en movimiento continuo infinito (pausa al pasar el cursor) */}
+          <div
+            className="flex-1 overflow-hidden"
+            title="Pasa el cursor por encima para pausar la lectura"
+          >
+            <div className="animate-ticker-infinite flex items-center gap-8 text-xs whitespace-nowrap">
+              {marqueeItems.map((item, idx) => (
+                <span
+                  key={`${item.id}-${idx}`}
+                  className="inline-flex items-center gap-2 cursor-pointer transition hover:text-[#307FE2]"
+                  onClick={() => setSearchQuery(item.title.slice(0, 20))}
+                >
+                  <span className="font-bold text-[#307FE2]">
+                    [{item.category}]
+                  </span>
+                  <span className="font-medium text-theme-primary">
+                    {item.title}
+                  </span>
+                  <span className="text-[10px] text-theme-secondary font-semibold">
+                    ({item.campus})
+                  </span>
+                  <span className="text-theme-secondary/40 select-none">·</span>
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </header>

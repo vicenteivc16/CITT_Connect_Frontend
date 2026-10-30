@@ -91,3 +91,24 @@ p {
 ::-webkit-scrollbar-thumb:hover {
   background: #FFB800;
 }
+
+/* Ticker Marquee Infinito de Último Minuto */
+@keyframes ticker-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-ticker-infinite {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: ticker-scroll 32s linear infinite;
+}
+
+.animate-ticker-infinite:hover {
+  animation-play-state: paused;
+}
