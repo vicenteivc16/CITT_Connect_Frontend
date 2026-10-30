@@ -5,6 +5,7 @@ import {
   CittFeedPost,
   CittMemberProfile,
   CittProject,
+  ProjectApplication,
 } from '@/types/citt';
 import {
   INITIAL_POSTS,
@@ -31,6 +32,11 @@ interface CittNetworkContextValue {
   loginMember: (emailOrUsername: string) => boolean;
   logoutMember: () => void;
   addProject: (project: Omit<CittProject, 'id' | 'createdAt'>) => void;
+  applyToProject: (
+    projectId: string,
+    appData: { answers?: Record<string, string>; note?: string }
+  ) => { success: boolean; message: string };
+  hasUserApplied: (projectId: string, username?: string) => boolean;
   addPost: (post: Omit<CittFeedPost, 'id' | 'createdAt'>) => void;
 }
 
@@ -255,6 +261,79 @@ export function CittNetworkProvider({
     });
   };
 
+  const applyToProject = (
+    projectId: string,
+    appData: { answers?: Record<string, string>; note?: string }
+  ): { success: boolean; message: string } => {
+    const targetProject = projects.find(
+      (p) => p.id === projectId || p.slug === projectId
+    );
+    if (!targetProject) {
+      return { success: false, message: 'Proyecto no encontrado.' };
+    }
+
+    const alreadyApplied = targetProject.applications?.some(
+      (a) => a.applicantUsername === activeUser.username
+    );
+
+    if (alreadyApplied) {
+      return {
+        success: false,
+        message: 'Ya has postulado previamente a esta iniciativa.',
+      };
+    }
+
+    const newApplication: ProjectApplication = {
+      id: `app-${Date.now()}`,
+      projectId: targetProject.id,
+      applicantUsername: activeUser.username,
+      applicantName: activeUser.fullName,
+      applicantEmail: activeUser.email,
+      applicantRole: activeUser.role,
+      applicantCampusSlug: activeUser.campusSlug,
+      applicantSchoolSlug: activeUser.schoolSlug,
+      appliedAt: 'Recién postulado',
+      status: 'pending',
+      answers: appData.answers,
+      note: appData.note,
+    };
+
+    setProjects((prev) => {
+      const next = prev.map((p) => {
+        if (p.id === targetProject.id) {
+          return {
+            ...p,
+            applications: [...(p.applications || []), newApplication],
+          };
+        }
+        return p;
+      });
+      try {
+        localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+
+    return {
+      success: true,
+      message:
+        '¡Tu postulación ha sido enviada con éxito usando tu cuenta CITT Connect!',
+    };
+  };
+
+  const hasUserApplied = (projectId: string, username?: string): boolean => {
+    const checkUsername = username || activeUser.username;
+    const targetProject = projects.find(
+      (p) => p.id === projectId || p.slug === projectId
+    );
+    if (!targetProject || !targetProject.applications) return false;
+    return targetProject.applications.some(
+      (a) => a.applicantUsername === checkUsername
+    );
+  };
+
   const addPost = (postData: Omit<CittFeedPost, 'id' | 'createdAt'>) => {
     const newPost: CittFeedPost = {
       ...postData,
@@ -292,6 +371,8 @@ export function CittNetworkProvider({
         loginMember,
         logoutMember,
         addProject,
+        applyToProject,
+        hasUserApplied,
         addPost,
       }}
     >

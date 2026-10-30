@@ -4,27 +4,67 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
-  ExternalLink,
+  ArrowRight,
+  ClipboardList,
+  FileText,
   HandHelping,
   MapPin,
+  Play,
   Plus,
+  Sparkles,
   Users,
+  Video,
   X,
 } from 'lucide-react';
 import { useCittNetwork } from '@/context/CittNetworkContext';
 import { getCampusBySlug } from '@/data/citt-catalog';
 import { RoleBadge, SchoolBadge } from '@/components/RoleBadge';
+import { ProjectApplicationMode, ProjectQuestion } from '@/types/citt';
+
+const DEFAULT_README_TEMPLATE = `# [Nombre del Proyecto] 🚀
+
+> **Iniciativa Inter-Sedes CITT Duoc UC**
+
+## 💡 Descripción & Propósito
+Breve explicación de la problemática que resuelve este proyecto y qué tecnologías clave utiliza.
+
+---
+
+## 🛠️ Stack Tecnológico
+* **Lenguajes:** TypeScript / Python / C++
+* **Frameworks & Librerías:** Next.js / ROS 2 / PyTorch
+* **Hardware:** ESP32 / Arduino / Sensores IoT
+
+---
+
+## 👥 Colaboradores Buscados
+Buscamos compañeros de diferentes sedes y escuelas de Duoc UC para apoyarnos en:
+1. Diseño de Interfaz & Prototipado UX
+2. Desarrollo de Firmware / Backend
+3. Pruebas de campo y validación con usuarios
+`;
 
 export default function InterCampusProjectsPage() {
   const { projects, activeUser, addProject } = useCittNetwork();
   const [onlyLookingForHelp, setOnlyLookingForHelp] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Form states
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [neededSpecsInput, setNeededSpecsInput] = useState('');
   const [helpDetails, setHelpDetails] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [readmeContent, setReadmeContent] = useState('');
+  const [applicationMode, setApplicationMode] =
+    useState<ProjectApplicationMode>('direct');
+  const [question1, setQuestion1] = useState(
+    '¿En qué sede y carrera de Duoc UC estudias?'
+  );
+  const [question2, setQuestion2] = useState(
+    '¿Qué experiencia previa o interés tienes en esta área?'
+  );
 
   const visibleProjects = onlyLookingForHelp
     ? projects.filter((p) => p.lookingForCollaborators)
@@ -38,6 +78,24 @@ export default function InterCampusProjectsPage() {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
+
+    const questions: ProjectQuestion[] = [];
+    if (applicationMode === 'form') {
+      if (question1.trim()) {
+        questions.push({
+          id: 'q1',
+          question: question1.trim(),
+          required: true,
+        });
+      }
+      if (question2.trim()) {
+        questions.push({
+          id: 'q2',
+          question: question2.trim(),
+          required: false,
+        });
+      }
+    }
 
     addProject({
       slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -56,13 +114,21 @@ export default function InterCampusProjectsPage() {
         helpDetails.trim() ||
         'Abierto a colaborar con estudiantes y líderes de cualquier sede CITT de Chile.',
       repoUrl: repoUrl.trim() || undefined,
+      videoUrl: videoUrl.trim() || undefined,
+      readmeContent: readmeContent.trim() || undefined,
+      applicationMode,
+      applicationQuestions: questions.length > 0 ? questions : undefined,
     });
 
+    // Reset form
     setTitle('');
     setSummary('');
     setNeededSpecsInput('');
     setHelpDetails('');
     setRepoUrl('');
+    setVideoUrl('');
+    setReadmeContent('');
+    setApplicationMode('direct');
     setModalOpen(false);
   };
 
@@ -94,14 +160,15 @@ export default function InterCampusProjectsPage() {
 
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" />
-            <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-[94vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-theme bg-theme-surface p-6 text-theme-primary shadow-2xl focus:outline-none">
+            <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[92vh] w-[94vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 text-theme-primary shadow-2xl focus:outline-none sm:p-8">
               <div className="flex items-center justify-between border-b border-theme pb-3">
                 <Dialog.Title className="text-base font-bold text-theme-primary">
-                  Proponer Proyecto o Pedir Ayuda Inter-Sedes
+                  Proponer Proyecto o Convocatoria CITT
                 </Dialog.Title>
                 <Dialog.Close asChild>
                   <button
                     type="button"
+                    aria-label="Cerrar modal"
                     className="rounded-lg p-1 text-theme-secondary hover:text-theme-primary"
                   >
                     <X className="h-4 w-4" />
@@ -109,7 +176,8 @@ export default function InterCampusProjectsPage() {
                 </Dialog.Close>
               </div>
 
-              <form onSubmit={handleCreateProject} className="mt-4 space-y-4">
+              <form onSubmit={handleCreateProject} className="mt-5 space-y-4">
+                {/* Título */}
                 <div>
                   <label className="block text-xs font-bold text-theme-primary">
                     Título del Proyecto o Iniciativa *
@@ -120,48 +188,174 @@ export default function InterCampusProjectsPage() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Ej. Sistema IoT de Riego Inteligente Multi-Sede"
-                    className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
                   />
                 </div>
 
+                {/* Resumen */}
                 <div>
                   <label className="block text-xs font-bold text-theme-primary">
                     Resumen del Proyecto *
                   </label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     required
                     value={summary}
                     onChange={(e) => setSummary(e.target.value)}
                     placeholder="Describe qué problema resuelve y en qué etapa se encuentra..."
-                    className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
                   />
                 </div>
 
+                {/* Enlace Video / YouTube Demo */}
                 <div>
                   <label className="block text-xs font-bold text-theme-primary">
-                    Especialidades que buscas en otras Sedes / Carreras (separadas por coma)
+                    Enlace de Video Demo (YouTube, Vimeo o video directo)
                   </label>
-                  <input
-                    type="text"
-                    value={neededSpecsInput}
-                    onChange={(e) => setNeededSpecsInput(e.target.value)}
-                    placeholder="Ej. Diseño UX/UI, Impresión 3D, Ciberseguridad, Python"
-                    className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                  />
+                  <div className="relative mt-1">
+                    <Video className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-theme-secondary" />
+                    <input
+                      type="url"
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=... (se reproducirá en el portal sin salir)"
+                      className="w-full rounded-xl border border-theme bg-theme-subtle py-2 pr-3.5 pl-10 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-theme-secondary">
+                    Los videos de YouTube se incrustan directamente en la vista de detalle para que los evaluadores lo vean sin ser redirigidos.
+                  </p>
                 </div>
 
+                {/* Documentación README.md (Estilo GitHub) */}
                 <div>
-                  <label className="block text-xs font-bold text-theme-primary">
-                    Detalle de la ayuda o perfiles requeridos
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-theme-primary">
+                      Documentación Técnica (README.md estilo GitHub)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setReadmeContent(DEFAULT_README_TEMPLATE)}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#307FE2] hover:underline"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      <span>Cargar plantilla Markdown</span>
+                    </button>
+                  </div>
                   <textarea
-                    rows={2}
-                    value={helpDetails}
-                    onChange={(e) => setHelpDetails(e.target.value)}
-                    placeholder="Ej. Buscamos 1 compañero de Diseño y 1 de Ingeniería de cualquier sede para completar el prototipo..."
-                    className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    rows={5}
+                    value={readmeContent}
+                    onChange={(e) => setReadmeContent(e.target.value)}
+                    placeholder="# Nombre del Proyecto&#10;&#10;Escribe o pega aquí el contenido Markdown tal como en un README de GitHub..."
+                    className="mt-1 font-mono w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
                   />
+                </div>
+
+                {/* Especialidades buscadas */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-bold text-theme-primary">
+                      Especialidades buscadas (separadas por coma)
+                    </label>
+                    <input
+                      type="text"
+                      value={neededSpecsInput}
+                      onChange={(e) => setNeededSpecsInput(e.target.value)}
+                      placeholder="Diseño UX, Impresión 3D, Python"
+                      className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-theme-primary">
+                      Repositorio GitHub (Opcional)
+                    </label>
+                    <input
+                      type="url"
+                      value={repoUrl}
+                      onChange={(e) => setRepoUrl(e.target.value)}
+                      placeholder="https://github.com/usuario/repo"
+                      className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Modo de Postulación: Directa vs Formulario con Preguntas */}
+                <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5">
+                  <p className="text-xs font-bold text-theme-primary">
+                    Modalidad de Postulación para Compañeros
+                  </p>
+                  <p className="text-xs text-theme-secondary mt-0.5">
+                    Siempre se utilizará la cuenta logueada del ecosistema CITT Connect para registrar la postulación.
+                  </p>
+
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setApplicationMode('direct')}
+                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-xs transition ${
+                        applicationMode === 'direct'
+                          ? 'border-[#FFB800] bg-theme-surface font-bold text-theme-primary shadow-sm'
+                          : 'border-theme bg-transparent text-theme-secondary'
+                      }`}
+                    >
+                      <ArrowRight className="h-4 w-4 shrink-0 text-[#FFB800]" />
+                      <div>
+                        <p className="font-bold">Botón Postular Directo</p>
+                        <p className="text-xs text-theme-secondary">
+                          1-clic rápido con su perfil CITT
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setApplicationMode('form')}
+                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-xs transition ${
+                        applicationMode === 'form'
+                          ? 'border-[#307FE2] bg-theme-surface font-bold text-theme-primary shadow-sm'
+                          : 'border-theme bg-transparent text-theme-secondary'
+                      }`}
+                    >
+                      <ClipboardList className="h-4 w-4 shrink-0 text-[#307FE2]" />
+                      <div>
+                        <p className="font-bold">Formulario con Preguntas</p>
+                        <p className="text-xs text-theme-secondary">
+                          Filtro con preguntas a medida
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {applicationMode === 'form' && (
+                    <div className="mt-3 space-y-2 border-t border-theme pt-3">
+                      <p className="text-xs font-bold text-theme-primary">
+                        Preguntas para los postulantes:
+                      </p>
+                      <div>
+                        <label className="text-xs text-theme-secondary">
+                          Pregunta 1 (Obligatoria):
+                        </label>
+                        <input
+                          type="text"
+                          value={question1}
+                          onChange={(e) => setQuestion1(e.target.value)}
+                          className="mt-0.5 w-full rounded-lg border border-theme bg-theme-surface px-2.5 py-1.5 text-xs text-theme-primary focus:border-[#307FE2] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-theme-secondary">
+                          Pregunta 2 (Opcional):
+                        </label>
+                        <input
+                          type="text"
+                          value={question2}
+                          onChange={(e) => setQuestion2(e.target.value)}
+                          className="mt-0.5 w-full rounded-lg border border-theme bg-theme-surface px-2.5 py-1.5 text-xs text-theme-primary focus:border-[#307FE2] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -175,7 +369,7 @@ export default function InterCampusProjectsPage() {
                   </Dialog.Close>
                   <button
                     type="submit"
-                    className="rounded-xl bg-[#FFB800] px-4 py-2 text-xs font-bold text-[#1A1A1A]"
+                    className="rounded-xl bg-[#FFB800] px-4 py-2 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
                   >
                     Publicar en Red Nacional CITT
                   </button>
@@ -215,7 +409,7 @@ export default function InterCampusProjectsPage() {
         </div>
 
         <span className="text-xs text-theme-secondary">
-          Publicando como{' '}
+          Sesión activa:{' '}
           <strong className="text-theme-primary">{activeUser.fullName}</strong>
         </span>
       </div>
@@ -252,6 +446,33 @@ export default function InterCampusProjectsPage() {
                   {project.summary}
                 </p>
 
+                {/* Badges de soporte multimedia */}
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                  {project.videoUrl && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-[#307FE2]/30 bg-[#307FE2]/10 px-2 py-0.5 font-bold text-[#307FE2]">
+                      <Play className="h-3 w-3" />
+                      <span>Video Demo Incrustado</span>
+                    </span>
+                  )}
+                  {project.readmeContent && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-theme bg-theme-subtle px-2 py-0.5 font-bold text-theme-primary">
+                      <FileText className="h-3 w-3 text-[#FFB800]" />
+                      <span>README.md GitHub</span>
+                    </span>
+                  )}
+                  {project.applicationMode === 'form' ? (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-[#AC4FC6]/30 bg-[#AC4FC6]/10 px-2 py-0.5 font-bold text-[#AC4FC6]">
+                      <ClipboardList className="h-3 w-3" />
+                      <span>Postulación por Formulario</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-[#43B02A]/30 bg-[#43B02A]/10 px-2 py-0.5 font-bold text-[#43B02A]">
+                      <ArrowRight className="h-3 w-3" />
+                      <span>Postulación Directa</span>
+                    </span>
+                  )}
+                </div>
+
                 {project.lookingForCollaborators && (
                   <div className="mt-4 border-t border-theme pt-4">
                     <p className="inline-flex items-center gap-1.5 text-xs font-bold text-theme-primary">
@@ -268,13 +489,11 @@ export default function InterCampusProjectsPage() {
                         </span>
                       ))}
                     </div>
-                    <p className="mt-2.5 text-xs leading-relaxed text-theme-secondary">
-                      {project.helpRequestDetails}
-                    </p>
                   </div>
                 )}
               </div>
 
+              {/* Footer con Lead y Botón "Más información" */}
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-theme pt-4">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-[#307FE2]" />
@@ -289,11 +508,11 @@ export default function InterCampusProjectsPage() {
                 </div>
 
                 <Link
-                  href={`/u/${project.leadUsername}`}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FFB800] px-3.5 py-2 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
+                  href={`/proyectos/${project.slug || project.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FFB800] px-4 py-2 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
                 >
-                  <span>Contactar / Ver Credencial</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>Más información</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
             </article>

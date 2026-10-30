@@ -69,6 +69,30 @@ export interface CittMemberProfile {
   achievements?: string[];
 }
 
+export type ProjectApplicationMode = 'direct' | 'form';
+
+export interface ProjectQuestion {
+  id: string;
+  question: string;
+  placeholder?: string;
+  required?: boolean;
+}
+
+export interface ProjectApplication {
+  id: string;
+  projectId: string;
+  applicantUsername: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicantRole: CittRole;
+  applicantCampusSlug: string;
+  applicantSchoolSlug: DuocSchoolSlug;
+  appliedAt: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  answers?: Record<string, string>;
+  note?: string;
+}
+
 export interface CittProject {
   id: string;
   slug: string;
@@ -85,6 +109,12 @@ export interface CittProject {
   helpRequestDetails: string;
   repoUrl?: string;
   createdAt: string;
+  readmeContent?: string;
+  videoUrl?: string;
+  coverImageUrl?: string;
+  applicationMode?: ProjectApplicationMode;
+  applicationQuestions?: ProjectQuestion[];
+  applications?: ProjectApplication[];
 }
 
 export interface CittFeedPost {

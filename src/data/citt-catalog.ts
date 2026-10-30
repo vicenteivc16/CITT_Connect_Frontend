@@ -559,7 +559,63 @@ export const INITIAL_PROJECTS: CittProject[] = [
     ],
     helpRequestDetails:
       'Buscamos líderes o miembros de otras sedes (Viña del Mar, San Joaquín, Antonio Varas, Puerto Montt) para probar la lectura de códigos QR y preparar la fase de impresión de los pines 3D.',
-    repoUrl: 'https://github.com',
+    repoUrl: 'https://github.com/vicenteivc16/CITT_Connect_Frontend',
+    videoUrl: 'https://www.youtube.com/watch?v=kYv_3jZf9oU',
+    coverImageUrl: '/assets/banner-iot.webp',
+    applicationMode: 'form',
+    applicationQuestions: [
+      {
+        id: 'q1',
+        question: '¿En qué sede de Duoc UC estudias y qué carrera cursas?',
+        placeholder: 'Ej: San Joaquín · Ingeniería en Informática',
+        required: true,
+      },
+      {
+        id: 'q2',
+        question: '¿Tienes acceso o experiencia con impresión 3D (FDM/Resina) o pruebas de hardware?',
+        placeholder: 'Cuéntanos qué filamentos o impresoras has utilizado...',
+        required: true,
+      },
+      {
+        id: 'q3',
+        question: '¿Cuántas horas a la semana puedes dedicar para pruebas inter-sedes?',
+        placeholder: 'Ej: 4 a 6 horas semanales',
+        required: false,
+      },
+    ],
+    readmeContent: `# Pin Inteligente NFC Tipo Sándwich & Ecosistema CITT Connect 🚀
+
+> **Proyecto Oficial del CITT Duoc UC · Sede San Andrés de Concepción & Red Nacional**
+
+El **Pin Inteligente NFC** es un dispositivo físico tipo credencial de solapa diseñado para ser impreso en 3D mediante tecnología FDM (Fused Deposition Modeling). Incorpora un encapsulado tipo sándwich que protege un chip **NTAG213 / NTAG215**, permitiendo el intercambio instantáneo de contactos profesionales con solo acercar un teléfono móvil.
+
+---
+
+## 🛠️ Especificaciones Técnicas del Hardware
+* **Chip NFC:** NTAG213 (144 bytes útiles) o NTAG215 (504 bytes útiles) con protocolo ISO/IEC 14443 Type A.
+* **Material del Chasis:** Filamento PLA+ o PETG de alta tenacidad con pausa en capa media (Z=1.6mm) para incrustar el tag NFC.
+* **Acabado Estético:** Emblema 3D CITT en relieve con doble extrusión o pintura acrílica bicomponente.
+* **Compatibilidad:** 100% nativo con iOS (iPhone XS en adelante) y Android con lector NFC activo sin necesidad de aplicaciones adicionales.
+
+---
+
+## 🌐 Arquitectura de Redirección Dinámica
+\`\`\`text
+[ Tap NFC en Teléfono ] ──▶ GET /nfc/{tag_uid} ──▶ Edge Redirect (307) ──▶ /u/{username} (Perfil Phygital)
+\`\`\`
+
+1. **Lectura Inmediata:** El chip no almacena datos estáticos; almacena la URL corta única \`https://cittconnect.duocuc.cl/nfc/{uid}\`.
+2. **Desacoplamiento:** Si el alumno cambia su número o rol, el pin físico sigue funcionando sin tener que reescribir el chip.
+3. **Métricas de Contacto:** Registra la cantidad de toques exitosos para analítica de networking en ferias.
+
+---
+
+## 👥 Perfiles Buscados para el Equipo
+Buscamos estudiantes y docentes de cualquier sede Duoc UC para colaborar en:
+- **Área Maker / 3D:** Calibración de tolerancias de contracción térmica para el alojamiento del tag.
+- **Área Frontend / PWA:** Optimización del tiempo de respuesta del perfil público a menos de 500ms.
+- **Embajadores de Sede:** Alumnos encargados de distribuir y ensayar los pines en sus sedes locales.
+`,
     createdAt: 'Hace 2 días',
   },
   {
@@ -583,6 +639,47 @@ export const INITIAL_PROJECTS: CittProject[] = [
     helpRequestDetails:
       'Necesitamos 1 estudiante de Diseño de cualquier sede para optimizar la carcasa resistente al polvo y 1 desarrollador frontend para el panel de telemetría en tiempo real.',
     repoUrl: 'https://github.com',
+    videoUrl: 'https://www.youtube.com/watch?v=Sby1UkHAbxA',
+    coverImageUrl: '/assets/banner-iot.webp',
+    applicationMode: 'form',
+    applicationQuestions: [
+      {
+        id: 'q1',
+        question: '¿Qué experiencia tienes con Python, OpenCV o modelos de visión como YOLO?',
+        placeholder: 'Describe brevemente tus proyectos previos...',
+        required: true,
+      },
+      {
+        id: 'q2',
+        question: '¿En qué área te gustaría colaborar principalmente (Hardware, IA o Dashboard)?',
+        placeholder: 'Selecciona tu foco preferido...',
+        required: true,
+      },
+    ],
+    readmeContent: `# Rover Autónomo de Monitoreo Forestal con Visión Artificial 🌲🤖
+
+Iniciativa inter-escuelas Duoc UC (Ingeniería + Informática + Diseño) para prevenir focos de incendios forestales mediante robótica terrestre autónoma y telemetría de largo alcance.
+
+---
+
+## 🛰️ Componentes del Sistema
+- **Unidad de Cómputo Embebido:** NVIDIA Jetson Orin Nano / Raspberry Pi 4.
+- **Sensor Térmico & Espectral:** Cámara termográfica FLIR Lepton 3.5 con resolución radiométrica.
+- **Navegación:** Sistema ROS 2 (Robot Operating System) con odometría visual y GPS RTK centimétrico.
+- **Comunicaciones:** Módulos LoRaWAN 915 MHz para zonas rurales sin cobertura 4G/5G.
+
+\`\`\`mermaid
+flowchart LR
+    A["Cámara Térmica FLIR"] --> B["Jetson Orin (YOLOv8)"]
+    C["Sensores Gas / Humo"] --> B
+    B --> D["Módulo LoRaWAN"]
+    D --> E["Gateway Estación Base CITT"]
+    E --> F["Dashboard CITT Connect"]
+\`\`\`
+
+## 🎯 Estado Actual y Próximos Pasos
+Hemos completado las pruebas de tracción 4x4 en terrenos con pendiente de 25 grados. Actualmente estamos optimizando el peso de la carcasa hermética y conectando los eventos de alerta al panel web de CITT Connect.
+`,
     createdAt: 'Hace 5 días',
   },
   {
@@ -605,6 +702,20 @@ export const INITIAL_PROJECTS: CittProject[] = [
     ],
     helpRequestDetails:
       'Pedimos ayuda a compañeros de Ingeniería en Electricidad o Construcción de cualquier sede para validar el protocolo técnico dentro del simulador.',
+    coverImageUrl: '/assets/citt-hero-lobby.webp',
+    applicationMode: 'direct',
+    readmeContent: `# Simulador de Realidad Virtual para Maniobras Eléctricas 🥽⚡
+
+Desarrollado en el laboratorio CITT Sede Maipú para apoyar la formación de técnicos e ingenieros de Duoc UC.
+
+### 🎮 Tecnologías
+- **Motor Gráfico:** Unreal Engine 5.3 con Nanite y Lumen.
+- **Dispositivos Objetivo:** Meta Quest 2 / Quest 3 y HTC Vive Focus 3.
+- **Interacciones:** Sistema háptico para uso de pértiga aislante y colocación de candados de bloqueo (LOTO).
+
+### 🚀 Postulación Abierta Directa
+Este proyecto admite **Postulación Directa en 1 Clic**: tu cuenta institucional autenticada se vinculará automáticamente al registro de colaboradores de la iniciativa.
+`,
     createdAt: 'Hace 1 semana',
   },
 ];
