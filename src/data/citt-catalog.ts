@@ -562,6 +562,70 @@ export const INITIAL_PROJECTS: CittProject[] = [
     repoUrl: 'https://github.com/vicenteivc16/CITT_Connect_Frontend',
     videoUrl: 'https://www.youtube.com/watch?v=kYv_3jZf9oU',
     coverImageUrl: '/assets/banner-iot.webp',
+    galleryImages: [
+      '/assets/banner-iot.webp',
+      '/assets/citt-hero-lobby.webp',
+      '/assets/banner-comunidad.webp',
+    ],
+    maturityStage: 'prototipado',
+    collaborators: [
+      {
+        id: 'collab-1',
+        username: 'carlos-vega-docente',
+        fullName: 'Prof. Carlos Vega R.',
+        role: 'personal_duoc',
+        roleInProject: 'Docente Patrocinador Duoc UC',
+        campusSlug: 'concepcion',
+        schoolSlug: 'informatica',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80',
+      },
+      {
+        id: 'collab-2',
+        username: 'javiera-mendez-aws',
+        fullName: 'Javiera Méndez Solar',
+        role: 'partner',
+        organization: 'AWS Cloud Chile',
+        roleInProject: 'Mentora de Industria & Sponsor',
+        campusSlug: 'antonio-varas',
+        schoolSlug: 'informatica',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+      },
+      {
+        id: 'collab-3',
+        username: 'vicente-vasquez',
+        fullName: 'Vicente Vásquez',
+        role: 'dev',
+        roleInProject: 'Lead Core Dev & Creador',
+        campusSlug: 'concepcion',
+        schoolSlug: 'informatica',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      },
+      {
+        id: 'collab-4',
+        username: 'camila-soto',
+        fullName: 'Camila Soto',
+        role: 'lider_citt',
+        roleInProject: 'Líder Track Robótica & 3D',
+        campusSlug: 'san-joaquin',
+        schoolSlug: 'ingenieria',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80',
+      },
+      {
+        id: 'collab-5',
+        username: 'matias-alarcon',
+        fullName: 'Matías Alarcón Vergara',
+        role: 'usuario_citt',
+        roleInProject: 'Desarrollador Firmware C++',
+        campusSlug: 'concepcion',
+        schoolSlug: 'informatica',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      },
+    ],
     applicationMode: 'form',
     applicationQuestions: [
       {
@@ -600,8 +664,15 @@ El **Pin Inteligente NFC** es un dispositivo físico tipo credencial de solapa d
 ---
 
 ## 🌐 Arquitectura de Redirección Dinámica
-\`\`\`text
-[ Tap NFC en Teléfono ] ──▶ GET /nfc/{tag_uid} ──▶ Edge Redirect (307) ──▶ /u/{username} (Perfil Phygital)
+
+\`\`\`mermaid
+flowchart TD
+    A["Tap en Pin NFC Físico (NTAG213)"] --> B["Lectura Nativa en iOS / Android"]
+    B --> C["GET /nfc/{tag_uid} (Edge Handler)"]
+    C --> D{"¿Tag Activo en CITT Connect?"}
+    D -- "Sí" --> E["HTTP 307 Redirección Instantánea"]
+    E --> F["/u/{username} (Perfil Phygital & vCard)"]
+    D -- "No" --> G["Pantalla de Asignación de Pin a Estudiante"]
 \`\`\`
 
 1. **Lectura Inmediata:** El chip no almacena datos estáticos; almacena la URL corta única \`https://cittconnect.duocuc.cl/nfc/{uid}\`.
@@ -641,6 +712,28 @@ Buscamos estudiantes y docentes de cualquier sede Duoc UC para colaborar en:
     repoUrl: 'https://github.com',
     videoUrl: 'https://www.youtube.com/watch?v=Sby1UkHAbxA',
     coverImageUrl: '/assets/banner-iot.webp',
+    galleryImages: ['/assets/banner-iot.webp', '/assets/citt-hero-lobby.webp'],
+    maturityStage: 'pruebas_campo',
+    collaborators: [
+      {
+        id: 'collab-r1',
+        username: 'matias-alarcon',
+        fullName: 'Matías Alarcón Vergara',
+        role: 'usuario_citt',
+        roleInProject: 'Líder de Proyecto & Robótica',
+        campusSlug: 'concepcion',
+        schoolSlug: 'ingenieria',
+      },
+      {
+        id: 'collab-r2',
+        username: 'carlos-vega-docente',
+        fullName: 'Prof. Carlos Vega R.',
+        role: 'personal_duoc',
+        roleInProject: 'Coordinador CITT Sede Concepción',
+        campusSlug: 'concepcion',
+        schoolSlug: 'informatica',
+      },
+    ],
     applicationMode: 'form',
     applicationQuestions: [
       {
@@ -703,6 +796,28 @@ Hemos completado las pruebas de tracción 4x4 en terrenos con pendiente de 25 gr
     helpRequestDetails:
       'Pedimos ayuda a compañeros de Ingeniería en Electricidad o Construcción de cualquier sede para validar el protocolo técnico dentro del simulador.',
     coverImageUrl: '/assets/citt-hero-lobby.webp',
+    galleryImages: ['/assets/citt-hero-lobby.webp'],
+    maturityStage: 'ideacion',
+    collaborators: [
+      {
+        id: 'collab-vr1',
+        username: 'francisca-navarro',
+        fullName: 'Francisca Navarro Pino',
+        role: 'usuario_citt',
+        roleInProject: 'Creadora & Diseñadora 3D',
+        campusSlug: 'maipu',
+        schoolSlug: 'comunicacion',
+      },
+      {
+        id: 'collab-vr2',
+        username: 'vicente-vasquez',
+        fullName: 'Vicente Vásquez',
+        role: 'dev',
+        roleInProject: 'Asesor Técnico WebXR',
+        campusSlug: 'concepcion',
+        schoolSlug: 'informatica',
+      },
+    ],
     applicationMode: 'direct',
     readmeContent: `# Simulador de Realidad Virtual para Maniobras Eléctricas 🥽⚡
 

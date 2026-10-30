@@ -93,6 +93,24 @@ export interface ProjectApplication {
   note?: string;
 }
 
+export interface ProjectCollaborator {
+  id: string;
+  username: string;
+  fullName: string;
+  role: CittRole;
+  roleInProject: string;
+  campusSlug: string;
+  schoolSlug: DuocSchoolSlug;
+  avatarUrl?: string;
+  organization?: string;
+}
+
+export type ProjectMaturityStage =
+  | 'ideacion'
+  | 'prototipado'
+  | 'pruebas_campo'
+  | 'transferencia';
+
 export interface CittProject {
   id: string;
   slug: string;
@@ -112,9 +130,12 @@ export interface CittProject {
   readmeContent?: string;
   videoUrl?: string;
   coverImageUrl?: string;
+  galleryImages?: string[];
+  maturityStage?: ProjectMaturityStage;
   applicationMode?: ProjectApplicationMode;
   applicationQuestions?: ProjectQuestion[];
   applications?: ProjectApplication[];
+  collaborators?: ProjectCollaborator[];
 }
 
 export interface CittFeedPost {
