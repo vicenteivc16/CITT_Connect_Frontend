@@ -130,9 +130,9 @@ export function inspectEmailDomain(email: string): DomainInspectionResult {
     domain,
     type: 'external',
     assignedRole: null,
-    badgeLabel: '⚠ Dominio externo no institucional — Requiere Invitación Partner',
+    badgeLabel: '⚠ Dominio externo no permitido',
     badgeColor: '#E87722',
-    description: 'Solo se permiten correos oficiales Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl). Los correos externos requieren un Código de Invitación Partner válido.',
+    description: 'Solo se permiten correos oficiales de Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl). El acceso a empresas colaboradoras se gestiona exclusivamente mediante invitación personalizada.',
     requiresPartnerInvite: true,
   };
 }
@@ -260,7 +260,7 @@ export async function executeCittRegister(
       return {
         success: false,
         message:
-          'Acceso denegado: Solo se permiten correos institucionales de Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl). No puedes crear cuenta con un correo externo a menos que cuentes con un Código de Invitación Partner válido.',
+          'Acceso restringido: Solo se permiten correos oficiales de Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl). El registro de empresas aliadas se gestiona de forma exclusiva mediante invitación por correo institucional.',
       };
     }
 

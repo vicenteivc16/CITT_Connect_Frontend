@@ -5,24 +5,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
-  Building2,
-  Check,
   CheckCircle2,
-  Compass,
-  Crown,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   GraduationCap,
+  HelpCircle,
   Info,
-  KeyRound,
   Lock,
   Mail,
   School,
   ShieldCheck,
   Sparkles,
-  Terminal,
-  Ticket,
   User,
-  UserCheck,
   XCircle,
 } from 'lucide-react';
 import { useCittNetwork } from '@/context/CittNetworkContext';
@@ -38,127 +33,107 @@ import {
   executeCittRegister,
   inspectEmailDomain,
   signInWithMicrosoftDuoc,
-  validatePartnerInviteCode,
 } from '@/lib/auth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase/client';
 import { RoleBadge } from '@/components/RoleBadge';
 import { CittMemberProfile, CittRole, DuocSchoolSlug } from '@/types/citt';
 
-type AuthTab = 'login' | 'register' | 'partner-invite';
+type AuthTab = 'login' | 'register';
 
-interface QuickRoleAccessItem {
-  role: CittRole;
-  username: string;
-  fullName: string;
-  careerTitle: string;
-  campusSlug: string;
-  email: string;
-  accentHex: string;
+interface PromoSlide {
+  id: string;
+  category: string;
+  headline: string;
+  subheadline: string;
+  description: string;
+  image: string;
+  statsPill: string;
+  badgeColor: string;
 }
 
-const QUICK_ROLE_USERS: QuickRoleAccessItem[] = [
+const PROMO_SLIDES: PromoSlide[] = [
   {
-    role: 'personal_duoc',
-    username: 'carlos-vega-docente',
-    fullName: 'Prof. Carlos Vega R.',
-    careerTitle: 'Docente Patrocinador & Coordinador CITT',
-    campusSlug: 'concepcion',
-    email: 'carlos.vega@profesor.duocuc.cl',
-    accentHex: '#FFB800',
+    id: 'red-nacional',
+    category: 'RED INTER-SEDES DUOC UC',
+    headline: '18 Sedes Conectadas en un Ecosistema Único',
+    subheadline: 'Innovación Abierta & Transferencia Tecnológica',
+    description:
+      'Colabora con estudiantes, docentes y coordinadores de todo el país. Participa en proyectos reales, hackathons y desafíos multidisciplinarios de alto impacto.',
+    image: '/assets/citt-hero-lobby.webp',
+    statsPill: '18 Sedes Activas · 9 Escuelas · +10,000 Horas CITT',
+    badgeColor: '#FFB800',
   },
   {
-    role: 'lider_citt',
-    username: 'camila-soto',
-    fullName: 'Camila Soto',
-    careerTitle: 'Líder Track Robótica & Fabricación 3D',
-    campusSlug: 'san-joaquin',
-    email: 'c.soto@duocuc.cl',
-    accentHex: '#FFB800',
+    id: 'prototipado-id',
+    category: 'I+D APLICADA & PROTOTIPADO',
+    headline: 'Laboratorios Vivos & Créditos de Innovación',
+    subheadline: 'De la Idea al Producto Tecnológico Validado',
+    description:
+      'Desde robótica y gemelos digitales hasta inteligencia artificial y soluciones para la industria. Valida horas de laboratorio y obtén reconocimiento oficial en tu historial académico.',
+    image: '/assets/banner-iot.webp',
+    statsPill: 'Robótica · IoT · Inteligencia Artificial · AgroTech',
+    badgeColor: '#307FE2',
   },
   {
-    role: 'consejero_carrera',
-    username: 'valentina-soto',
-    fullName: 'Valentina Soto Miranda',
-    careerTitle: 'Consejera de Carrera · Escuela de Salud',
-    campusSlug: 'vina-del-mar',
-    email: 'v.soto@duocuc.cl',
-    accentHex: '#00A499',
-  },
-  {
-    role: 'usuario_citt',
-    username: 'matias-alarcon',
-    fullName: 'Matías Alarcón Vergara',
-    careerTitle: 'Desarrollador Firmware C++ / Robótica',
-    campusSlug: 'concepcion',
-    email: 'm.alarcon@duocuc.cl',
-    accentHex: '#43B02A',
-  },
-  {
-    role: 'partner',
-    username: 'javiera-mendez-aws',
-    fullName: 'Javiera Méndez Solar',
-    careerTitle: 'Líder Alianzas Cloud & IA · AustralCloud',
-    campusSlug: 'antonio-varas',
-    email: 'jmendez@australcloud.cl',
-    accentHex: '#AC4FC6',
-  },
-  {
-    role: 'dev',
-    username: 'vicente-vasquez',
-    fullName: 'Vicente Vásquez',
-    careerTitle: 'Lead Core Dev & Creador CITT Connect',
-    campusSlug: 'concepcion',
-    email: 'v.vasquez@cittconnect.cl',
-    accentHex: '#307FE2',
+    id: 'identidad-nfc',
+    category: 'IDENTIDAD INSTITUCIONAL INTEROPERABLE',
+    headline: 'Tu Pasaporte Tecnológico Duoc UC',
+    subheadline: 'Credencial Digital con Autenticación Microsoft 365',
+    description:
+      'Acceso unificado mediante tu cuenta institucional. Portafolio público de proyectos, verificación de roles, trazabilidad de competencias y soporte para hardware con chip NFC.',
+    image: '/assets/banner-comunidad.webp',
+    statsPill: 'Microsoft 365 SSO · Chip NFC · Trazabilidad Académica',
+    badgeColor: '#107C41',
   },
 ];
 
 export default function AccesoPage() {
   const router = useRouter();
   const {
-    profiles,
     activeUser,
     isAuthenticated,
     registerMember,
-    loginMember,
     setActiveUserByUsername,
     logoutMember,
   } = useCittNetwork();
 
   const [activeTab, setActiveTab] = useState<AuthTab>('login');
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [statusMessage, setStatusMessage] = useState<{
     type: 'success' | 'error' | 'info';
     text: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   // Formulario Login
   const [loginEmailOrUser, setLoginEmailOrUser] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
 
   // Formulario Registro
   const [regFullName, setRegFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
-  const [regUsername, setRegUsername] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regCampusSlug, setRegCampusSlug] = useState('san-joaquin');
   const [regSchoolSlug, setRegSchoolSlug] =
     useState<DuocSchoolSlug>('informatica');
   const [regCareerTitle, setRegCareerTitle] = useState('');
-  const [regInviteCode, setRegInviteCode] = useState('');
-  const [regPartnerOrg, setRegPartnerOrg] = useState('');
-
-  // Formulario Invitación Partner Directa
-  const [partnerCodeInput, setPartnerCodeInput] = useState('');
-  const [partnerEmailInput, setPartnerEmailInput] = useState('');
-  const [partnerValidatedOrg, setPartnerValidatedOrg] = useState<string | null>(
-    null
-  );
 
   // Inspección reactiva del dominio mientras se escribe en registro
   const domainInfo = inspectEmailDomain(regEmail);
 
-  // Listener de autenticación OAuth (Microsoft 365)
+  // Rotación automática de la galería promocional
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % PROMO_SLIDES.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [isAutoPlaying]);
+
+  // Listener de autenticación OAuth (Microsoft 365 / Azure Entra ID)
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     const {
@@ -171,11 +146,7 @@ export default function AccesoPage() {
         const email = session.user.email || '';
         const domainCheck = inspectEmailDomain(email);
 
-        if (
-          domainCheck.type === 'invalid' ||
-          (domainCheck.type === 'external' &&
-            !session.user.user_metadata?.invite_code)
-        ) {
+        if (domainCheck.type === 'invalid' || domainCheck.type === 'external') {
           setStatusMessage({
             type: 'error',
             text: `Acceso restringido: La cuenta ${email} no pertenece a los dominios oficiales de Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl).`,
@@ -192,7 +163,8 @@ export default function AccesoPage() {
         const newProfile: CittMemberProfile = {
           id: `usr-${session.user.id.slice(0, 8)}`,
           username: effectiveUser,
-          fullName: session.user.user_metadata?.full_name || email.split('@')[0],
+          fullName:
+            session.user.user_metadata?.full_name || email.split('@')[0],
           email,
           careerTitle:
             effectiveRole === 'personal_duoc'
@@ -244,35 +216,16 @@ export default function AccesoPage() {
       }
       setStatusMessage({
         type: 'info',
-        text: 'Para ingresar con Microsoft 365 Duoc UC, ingresa tu correo institucional (@duocuc.cl o @profesor.duoc.cl) en el formulario para validar tu identidad institucional.',
+        text: 'Portal institucional listo. Ingresa con tu cuenta @duocuc.cl o @profesor.duoc.cl.',
       });
     } catch {
       setStatusMessage({
         type: 'error',
-        text: 'No fue posible conectar con el servicio de Microsoft Auth.',
+        text: 'No fue posible conectar con el servicio de autenticación de Microsoft 365.',
       });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Acceso Rápido por Rol
-  const handleQuickRoleSelect = (item: QuickRoleAccessItem) => {
-    setIsLoading(true);
-    setLoginEmailOrUser(item.email);
-    setLoginPassword('demo-citt-2026');
-
-    setActiveUserByUsername(item.username);
-
-    setStatusMessage({
-      type: 'success',
-      text: `Iniciando sesión como ${item.fullName} (${ROLE_CONFIG[item.role].label}). Redirigiendo...`,
-    });
-
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push(`/u/${item.username}`);
-    }, 800);
   };
 
   // Manejar Login Manual
@@ -291,59 +244,43 @@ export default function AccesoPage() {
     }
 
     try {
-      const result = await executeCittLogin(loginEmailOrUser, loginPassword);
-      if (result.success) {
-        const loggedInLocally = loginMember(loginEmailOrUser);
-        if (!loggedInLocally && result.user) {
-          const generatedProfile: CittMemberProfile = {
-            id: `usr-${Date.now()}`,
-            username: result.user.username,
-            fullName: result.user.fullName,
-            email: result.user.email,
-            careerTitle:
-              result.user.role === 'personal_duoc'
-                ? 'Docente & Coordinador CITT'
-                : result.user.role === 'dev'
-                ? 'Core Dev Arquitectura'
-                : 'Miembro CITT Duoc UC',
-            currentOccupation: 'Comunidad Duoc UC',
-            specialties: ['Innovación', 'Transferencia Tecnológica'],
-            bio: 'Perfil verificado con acceso institucional a CITT Connect.',
-            role: result.user.role,
-            campusSlug: 'san-joaquin',
-            schoolSlug: 'informatica',
-            avatarUrl: '/assets/citt-logo.webp',
-            bannerUrl: '/assets/citt-hero-lobby.webp',
-            isOpenToCollaborate: true,
-            isVerified: true,
-          };
-          registerMember(generatedProfile);
-        }
+      const result = await executeCittLogin(
+        loginEmailOrUser.trim(),
+        loginPassword
+      );
 
-        setStatusMessage({
-          type: 'success',
-          text: `¡Bienvenido de vuelta! Accediendo como ${loginEmailOrUser}...`,
-        });
-        setTimeout(() => {
-          router.push(`/u/${result.user?.username || activeUser.username}`);
-        }, 800);
-      } else {
+      if (!result.success) {
         setStatusMessage({
           type: 'error',
           text: result.message,
         });
+        setIsLoading(false);
+        return;
       }
+
+      if (result.user?.username) {
+        setActiveUserByUsername(result.user.username);
+      }
+
+      setStatusMessage({
+        type: 'success',
+        text: 'Inicio de sesión institucional exitoso. Redirigiendo...',
+      });
+
+      setTimeout(() => {
+        router.push(`/u/${result.user?.username || activeUser.username}`);
+      }, 800);
     } catch {
       setStatusMessage({
         type: 'error',
-        text: 'Ocurrió un error al intentar autenticar. Inténtalo nuevamente.',
+        text: 'Error de comunicación al autenticar con el servidor.',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Manejar Registro
+  // Manejar Registro Institucional
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatusMessage(null);
@@ -358,21 +295,19 @@ export default function AccesoPage() {
       return;
     }
 
-    if (domainInfo.type === 'external' && !regInviteCode.trim()) {
+    if (domainInfo.type === 'external' || domainInfo.type === 'invalid') {
       setStatusMessage({
         type: 'error',
-        text: 'Acceso restringido: Solo se permiten correos institucionales Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl). No puedes crear una cuenta con un correo externo sin un Código de Invitación Partner válido emitido por CITT.',
+        text: 'Acceso restringido: Solo se permiten correos institucionales oficiales de Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl). El registro de empresas aliadas se gestiona mediante invitación personalizada.',
       });
       setIsLoading(false);
       return;
     }
 
-    const effectiveUsername =
-      regUsername.trim() ||
-      regEmail
-        .split('@')[0]
-        .toLowerCase()
-        .replace(/[^a-z0-9_-]/g, '-');
+    const effectiveUsername = regEmail
+      .split('@')[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-');
 
     try {
       const result = await executeCittRegister({
@@ -383,8 +318,6 @@ export default function AccesoPage() {
         campusSlug: regCampusSlug,
         schoolSlug: regSchoolSlug,
         careerTitle: regCareerTitle.trim(),
-        inviteCode: regInviteCode.trim() || undefined,
-        partnerCompany: regPartnerOrg.trim() || undefined,
       });
 
       if (!result.success) {
@@ -405,10 +338,8 @@ export default function AccesoPage() {
         email: regEmail.trim(),
         careerTitle: regCareerTitle.trim(),
         currentOccupation:
-          assignedRole === 'partner'
-            ? regPartnerOrg || 'Empresa Partner'
-            : assignedRole === 'personal_duoc'
-            ? 'Docente Duoc UC'
+          assignedRole === 'personal_duoc'
+            ? 'Docente / Funcionario Duoc UC'
             : 'Estudiante / Miembro CITT',
         specialties: ['Innovación', 'Transferencia Tecnológica'],
         bio: `Credencial institucional activada. Miembro de la sede ${regCampusSlug} en CITT Connect.`,
@@ -419,8 +350,6 @@ export default function AccesoPage() {
         bannerUrl: '/assets/citt-hero-lobby.webp',
         isOpenToCollaborate: true,
         isVerified: true,
-        partnerOrganization:
-          assignedRole === 'partner' ? regPartnerOrg || undefined : undefined,
       };
 
       registerMember(newMember);
@@ -428,9 +357,7 @@ export default function AccesoPage() {
 
       setStatusMessage({
         type: 'success',
-        text: `¡Cuenta institucional verificada con éxito! Rol asignado: ${
-          ROLE_CONFIG[assignedRole].label
-        }. Redirigiendo a tu credencial...`,
+        text: `¡Cuenta institucional verificada con éxito! Rol asignado: ${ROLE_CONFIG[assignedRole].label}. Redirigiendo a tu credencial...`,
       });
 
       setTimeout(() => {
@@ -446,315 +373,234 @@ export default function AccesoPage() {
     }
   };
 
-  // Validar Código Partner en Tab 3
-  const handleValidatePartnerCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!partnerCodeInput.trim()) return;
-
-    const validation = validatePartnerInviteCode(partnerCodeInput.trim());
-    if (validation.valid && validation.companyName) {
-      setPartnerValidatedOrg(validation.companyName);
-      setStatusMessage({
-        type: 'success',
-        text: `Código oficial validado: ${validation.companyName}. Puedes proceder a registrar tu cuenta partner.`,
-      });
-      setRegInviteCode(partnerCodeInput.trim());
-      setRegPartnerOrg(validation.companyName);
-      if (partnerEmailInput.trim()) {
-        setRegEmail(partnerEmailInput.trim());
-      }
-      setActiveTab('register');
-    } else {
-      setStatusMessage({
-        type: 'error',
-        text: 'El código de invitación ingresado no es válido o ya ha expirado.',
-      });
-    }
-  };
+  const activeSlideData = PROMO_SLIDES[currentSlide];
 
   return (
     <div className="min-h-screen bg-theme-canvas pt-20 pb-16 transition-colors duration-200">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
-        {/* CABECERA PRINCIPAL */}
-        <section className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card">
-          <div className="flex flex-col items-start justify-between gap-4 border-b border-theme pb-6 sm:flex-row sm:items-center">
-            <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#FFB800]/30 bg-[#FFB800]/10 px-3 py-1 text-xs font-bold text-[#FFB800]">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Autenticación Institucional & Gobernanza de Roles</span>
-              </div>
-              <h1 className="text-2xl font-black tracking-tight text-theme-primary sm:text-3xl lg:text-4xl">
-                Acceso & Registro CITT Connect
-              </h1>
-              <p className="text-xs leading-relaxed text-theme-secondary sm:text-sm">
-                Red inter-sedes de Duoc UC. Autenticación con correo institucional,
-                código partner verificado o simulador de roles para evaluación.
-              </p>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* LAYOUT PRINCIPAL: 2 PARTES (IZQUIERDA: GALERÍA PROMOCIONAL · DERECHA: PANEL DE ACCESO) */}
+        <div className="grid grid-cols-1 items-stretch gap-8 lg:grid-cols-12">
+          {/* ========================================================= */}
+          {/* COLUMNA IZQUIERDA: GALERÍA PROMOCIONAL CITT CONNECT       */}
+          {/* ========================================================= */}
+          <div
+            className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-theme bg-theme-surface p-7 sm:p-9 shadow-theme-card lg:col-span-6 xl:col-span-7"
+            onMouseEnter={() => setIsAutoPlaying(false)}
+            onMouseLeave={() => setIsAutoPlaying(true)}
+          >
+            {/* Imagen de Fondo Dinámica con Overlay Editorial */}
+            <div className="absolute inset-0 z-0 overflow-hidden">
+              <img
+                src={activeSlideData.image}
+                alt={activeSlideData.headline}
+                className="h-full w-full object-cover transition-all duration-700 ease-out scale-105 group-hover:scale-100"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0F141C] via-[#0F141C]/85 to-[#0F141C]/60" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0F141C]/90 via-transparent to-[#0F141C]/40" />
             </div>
 
-            <div className="flex items-center gap-2">
-              {isAuthenticated ? (
+            {/* Cabecera de la Galería Promocional */}
+            <div className="relative z-10 space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-white/20 bg-black/40 p-1.5 backdrop-blur-md shadow-lg">
+                    <img
+                      src="/assets/citt-logo.webp"
+                      alt="Emblema CITT Connect"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-[#FFB800]">
+                      Duoc UC · Red Nacional
+                    </span>
+                    <h2 className="text-base font-black tracking-tight text-white">
+                      CITT Connect
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md">
+                  <Sparkles className="h-3 w-3 text-[#FFB800]" />
+                  <span>Portal Oficial</span>
+                </div>
+              </div>
+
+              {/* Categoría y Tag del Slide Activo */}
+              <div className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-black/40 px-3 py-1 text-xs font-bold text-white backdrop-blur-md">
+                <span
+                  className="h-2 w-2 rounded-full animate-pulse"
+                  style={{ backgroundColor: activeSlideData.badgeColor }}
+                />
+                <span className="tracking-wide">{activeSlideData.category}</span>
+              </div>
+            </div>
+
+            {/* Cuerpo del Slide Activo: Titular, Bajada y Estadísticas */}
+            <div className="relative z-10 my-8 space-y-4 max-w-xl">
+              <h1 className="text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
+                {activeSlideData.headline}
+              </h1>
+
+              <p className="text-xs font-bold uppercase tracking-wider text-[#FFB800]/95 sm:text-sm">
+                {activeSlideData.subheadline}
+              </p>
+
+              <p className="text-xs leading-relaxed text-white/80 sm:text-sm">
+                {activeSlideData.description}
+              </p>
+
+              <div className="pt-2">
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
+                  <ShieldCheck className="h-4 w-4 text-[#FFB800]" />
+                  <span>{activeSlideData.statsPill}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pie de la Galería: Controles de Slide y Respaldo Institucional */}
+            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-white/15 pt-5">
+              {/* Indicadores de Slide */}
+              <div className="flex items-center gap-2">
+                {PROMO_SLIDES.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    onClick={() => setCurrentSlide(index)}
+                    aria-label={`Ver diapositiva ${index + 1}`}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      index === currentSlide
+                        ? 'w-8 bg-[#FFB800]'
+                        : 'w-2 bg-white/40 hover:bg-white/70'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Botones Anterior / Siguiente */}
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    logoutMember();
-                    setStatusMessage({
-                      type: 'info',
-                      text: 'Sesión cerrada exitosamente.',
-                    });
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-xs font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
+                  onClick={() =>
+                    setCurrentSlide(
+                      (prev) => (prev - 1 + PROMO_SLIDES.length) % PROMO_SLIDES.length
+                    )
+                  }
+                  aria-label="Diapositiva anterior"
+                  className="rounded-xl border border-white/20 bg-black/40 p-2 text-white/90 backdrop-blur-md transition hover:bg-white/20 hover:text-white"
                 >
-                  <span>Cerrar Sesión Actual</span>
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-subtle px-3 py-1.5 text-xs font-semibold text-theme-secondary">
-                  <span>Sin sesión activa</span>
-                </span>
-              )}
-
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-surface px-3.5 py-2 text-xs font-bold text-theme-primary transition hover:border-[#FFB800]"
-              >
-                <span>Volver al Inicio</span>
-              </Link>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentSlide((prev) => (prev + 1) % PROMO_SLIDES.length)
+                  }
+                  aria-label="Diapositiva siguiente"
+                  className="rounded-xl border border-white/20 bg-black/40 p-2 text-white/90 backdrop-blur-md transition hover:bg-white/20 hover:text-white"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* 1. SECCIÓN DE ACCESO RÁPIDO DEMO (6 ROLES CITT) */}
-          <div className="mt-6 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-black tracking-tight text-theme-primary">
-                  Acceso Rápido Demo · 6 Roles CITT Oficiales
+          {/* ========================================================= */}
+          {/* COLUMNA DERECHA: PANEL DE ACCESO & REGISTRO INSTITUCIONAL  */}
+          {/* ========================================================= */}
+          <div className="flex flex-col justify-center lg:col-span-6 xl:col-span-5">
+            <div className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card">
+              {/* Cabecera del Panel */}
+              <div className="space-y-1.5 pb-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src="/assets/citt-logo.webp"
+                      alt="CITT Duoc UC"
+                      className="h-7 w-7 object-contain"
+                    />
+                    <span className="text-xs font-black uppercase tracking-wider text-[#307FE2]">
+                      Duoc UC
+                    </span>
+                  </div>
+                  <Link
+                    href="/"
+                    className="text-xs font-bold text-theme-secondary hover:text-theme-primary transition"
+                  >
+                    Volver al inicio
+                  </Link>
+                </div>
+
+                <h2 className="text-xl font-black tracking-tight text-theme-primary sm:text-2xl">
+                  {activeTab === 'login'
+                    ? 'Iniciar Sesión Institucional'
+                    : 'Crear Credencial CITT'}
                 </h2>
-                <p className="text-xs text-theme-secondary">
-                  Haz clic en cualquiera de los 6 roles para iniciar sesión inmediatamente con un perfil verificado:
+                <p className="text-xs text-theme-secondary leading-relaxed">
+                  {activeTab === 'login'
+                    ? 'Accede con tu cuenta oficial de Duoc UC para gestionar tus proyectos y credencial digital.'
+                    : 'Registro exclusivo para estudiantes, docentes y coordinadores de Duoc UC.'}
                 </p>
               </div>
 
-              <span className="text-[11px] font-semibold text-theme-secondary">
-                1 clic para evaluar la plataforma
-              </span>
-            </div>
+              {/* SESIÓN ACTIVA (Si ya está autenticado) */}
+              {isAuthenticated && (
+                <div className="mb-6 rounded-2xl border border-[#307FE2]/30 bg-[#307FE2]/10 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 overflow-hidden rounded-xl border border-theme bg-theme-surface">
+                        <img
+                          src={activeUser.avatarUrl || '/assets/citt-logo.webp'}
+                          alt={activeUser.fullName}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-theme-primary">
+                            {activeUser.fullName}
+                          </span>
+                          <RoleBadge
+                            role={activeUser.role}
+                            showTooltip={false}
+                            size="sm"
+                          />
+                        </div>
+                        <p className="text-[11px] text-theme-secondary">
+                          @{activeUser.username} · Sede{' '}
+                          {getCampusBySlug(activeUser.campusSlug).shortName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {QUICK_ROLE_USERS.map((item) => {
-                const campus = getCampusBySlug(item.campusSlug);
-                const roleConfig = ROLE_CONFIG[item.role];
-                const isActive =
-                  isAuthenticated && activeUser.username === item.username;
-
-                return (
-                  <button
-                    key={item.role}
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => handleQuickRoleSelect(item)}
-                    className={`group relative flex items-start gap-3 rounded-2xl border p-3.5 text-left transition hover:scale-[1.01] hover:shadow-md ${
-                      isActive
-                        ? 'border-[#FFB800] bg-theme-subtle ring-2 ring-[#FFB800]/50'
-                        : 'border-theme bg-theme-subtle hover:border-theme-primary'
-                    }`}
-                  >
-                    <div
-                      style={{ borderColor: item.accentHex }}
-                      className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border-2 bg-theme-surface"
+                  <div className="flex items-center gap-2 pt-1">
+                    <Link
+                      href={`/u/${activeUser.username}`}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#FFB800] py-2 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
                     >
-                      <img
-                        src={`https://images.unsplash.com/photo-${
-                          item.role === 'personal_duoc'
-                            ? '1472099645785-5658abf4ff4e'
-                            : item.role === 'partner'
-                            ? '1573496359142-b8d87734a5a2'
-                            : item.role === 'dev'
-                            ? '1534528741775-53994a69daeb'
-                            : item.role === 'consejero_carrera'
-                            ? '1544005313-94ddf0286df2'
-                            : item.role === 'lider_citt'
-                            ? '1580489944761-15a19d654956'
-                            : '1507003211169-0a1dd7228f2d'
-                        }?auto=format&fit=crop&w=150&q=80`}
-                        alt={item.fullName}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="truncate text-xs font-black text-theme-primary group-hover:text-[#307FE2] transition">
-                          {item.fullName}
-                        </span>
-                        <RoleBadge role={item.role} showTooltip={false} size="sm" />
-                      </div>
-
-                      <p className="truncate text-[11px] text-theme-secondary font-medium">
-                        {item.careerTitle}
-                      </p>
-
-                      <div className="flex items-center justify-between text-[10px] text-theme-secondary/80 pt-0.5">
-                        <span>Sede {campus.shortName}</span>
-                        <span className="font-bold text-[#FFB800] group-hover:underline">
-                          {isActive ? '✓ Sesión Activa' : 'Entrar →'}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* ALERTA DE MENSAJE DE ESTADO */}
-        {statusMessage && (
-          <div
-            role="status"
-            className={`flex items-start gap-3 rounded-2xl border p-4 text-xs font-semibold shadow-sm ${
-              statusMessage.type === 'success'
-                ? 'border-[#43B02A]/40 bg-[#43B02A]/10 text-theme-primary'
-                : statusMessage.type === 'error'
-                ? 'border-red-500/40 bg-red-500/10 text-red-500'
-                : 'border-[#307FE2]/40 bg-[#307FE2]/10 text-[#307FE2]'
-            }`}
-          >
-            {statusMessage.type === 'success' ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-[#43B02A]" />
-            ) : statusMessage.type === 'error' ? (
-              <XCircle className="h-4 w-4 shrink-0 text-red-500" />
-            ) : (
-              <Info className="h-4 w-4 shrink-0 text-[#307FE2]" />
-            )}
-            <p className="flex-1">{statusMessage.text}</p>
-            <button
-              type="button"
-              onClick={() => setStatusMessage(null)}
-              className="text-theme-secondary hover:text-theme-primary"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* 2. FORMULARIOS DE ACCESO & INFORMACIÓN INSTITUCIONAL */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
-          {/* COLUMNA IZQUIERDA: Reglas de Dominio y Seguridad */}
-          <div className="space-y-6 lg:col-span-5">
-            <div className="rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card">
-              <div className="flex items-center gap-3">
-                <img
-                  src="/assets/citt-logo.webp"
-                  alt="Emblema CITT Connect 3D"
-                  className="h-11 w-11 shrink-0 object-contain"
-                />
-                <div>
-                  <h2 className="text-base font-black tracking-tight text-theme-primary">
-                    Comunidad Duoc UC Cerrada
-                  </h2>
-                  <p className="text-xs text-theme-secondary">
-                    Filtro estricto de identidad por dominio de correo
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-3">
-                {/* 1. Alumnos y Miembros CITT */}
-                <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl border border-[#307FE2]/30 bg-[#307FE2]/10 p-2 text-[#307FE2]">
-                      <GraduationCap className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-theme-primary">
-                          Alumnos & Miembros CITT
-                        </span>
-                        <span className="rounded-md border border-[#307FE2]/40 bg-[#307FE2]/15 px-2 py-0.5 text-[10px] font-bold text-[#307FE2]">
-                          @duocuc.cl
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[11px] text-theme-secondary leading-relaxed">
-                        Registro directo con credencial pública, portafolio de proyectos y red inter-sedes.
-                      </p>
-                    </div>
+                      <span>Ir a Mi Credencial</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logoutMember();
+                        setStatusMessage({
+                          type: 'info',
+                          text: 'Sesión cerrada exitosamente.',
+                        });
+                      }}
+                      className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-xs font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
+                    >
+                      Cerrar Sesión
+                    </button>
                   </div>
                 </div>
+              )}
 
-                {/* 2. Personal Docente y Directivos */}
-                <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl border border-[#FFB800]/40 bg-[#FFB800]/15 p-2 text-[#FFB800]">
-                      <ShieldCheck className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-theme-primary">
-                          Docentes & Coordinadores
-                        </span>
-                        <span className="rounded-md border border-[#1A1A1A]/30 bg-[#FFB800] px-2 py-0.5 text-[10px] font-bold text-[#1A1A1A]">
-                          @profesor.duocuc.cl
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[11px] text-theme-secondary leading-relaxed">
-                        Rol Personal Duoc con privilegios de gestión y validación de proyectos.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Core Dev Team */}
-                <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl border border-[#307FE2]/40 bg-[#307FE2]/15 p-2 text-[#307FE2]">
-                      <KeyRound className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-theme-primary">
-                          Core Dev & Arquitectura
-                        </span>
-                        <span className="rounded-md border border-[#307FE2]/40 bg-[#307FE2]/15 px-2 py-0.5 text-[10px] font-bold text-[#307FE2]">
-                          @cittconnect.cl
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[11px] text-theme-secondary leading-relaxed">
-                        Gobernanza técnica, integraciones, base de datos y despliegues.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Partners Externos */}
-                <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl border border-[#AC4FC6]/40 bg-[#AC4FC6]/15 p-2 text-[#AC4FC6]">
-                      <Building2 className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-theme-primary">
-                          Empresas Aliadas (Partner)
-                        </span>
-                        <span className="rounded-md border border-[#AC4FC6]/40 bg-[#AC4FC6]/15 px-2 py-0.5 text-[10px] font-bold text-[#AC4FC6]">
-                          Con Invitación
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[11px] text-theme-secondary leading-relaxed">
-                        Acceso mediante código de invitación autorizado para publicar desafíos y pasantías.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* COLUMNA DERECHA: Card Interactiva con Tabs de Acceso y Registro */}
-          <div className="lg:col-span-7">
-            <div className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card">
-              {/* Pestañas de Navegación del Formulario */}
-              <div className="flex rounded-2xl border border-theme bg-theme-subtle p-1.5">
+              {/* Pestañas de Navegación: SOLO 2 TABS (Iniciar Sesión | Crear Cuenta) */}
+              <div className="flex rounded-2xl border border-theme bg-theme-subtle p-1.5 mb-6">
                 <button
                   type="button"
                   onClick={() => {
@@ -783,190 +629,188 @@ export default function AccesoPage() {
                 >
                   Crear Cuenta
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('partner-invite');
-                    setStatusMessage(null);
-                  }}
-                  className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition ${
-                    activeTab === 'partner-invite'
-                      ? 'bg-[#FFB800] text-[#1A1A1A] shadow-sm'
-                      : 'text-theme-secondary hover:text-theme-primary'
-                  }`}
-                >
-                  Acceso Partner
-                </button>
               </div>
 
-              {/* TAB 1: FORMULARIO DE INICIO DE SESIÓN */}
-              {activeTab === 'login' && (
-                <div className="mt-6 space-y-4">
-                  {/* Botón Oficial Microsoft 365 Duoc UC */}
-                  <button
-                    type="button"
-                    onClick={handleMicrosoftAuth}
-                    disabled={isLoading}
-                    className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-theme bg-theme-subtle py-3 px-4 text-xs font-bold text-theme-primary shadow-sm transition hover:bg-theme-surface hover:border-[#FFB800] active:scale-[0.99]"
-                  >
-                    <svg className="h-4 w-4 shrink-0" viewBox="0 0 21 21">
-                      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
-                      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
-                      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
-                      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
-                    </svg>
-                    <span>Continuar con Cuenta Institucional Duoc UC (Microsoft 365)</span>
-                  </button>
-
-                  <div className="relative my-2 flex items-center justify-center">
-                    <div className="w-full border-t border-theme" />
-                    <span className="absolute bg-theme-surface px-3 text-[10px] font-bold text-theme-secondary uppercase tracking-wider">
-                      o con credenciales CITT
+              {/* BOTÓN PROMINENTE: CONTINUAR CON MICROSOFT 365 (DUOC UC) */}
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={handleMicrosoftAuth}
+                  disabled={isLoading}
+                  className="group relative flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-theme bg-theme-subtle px-4 py-3.5 text-xs font-bold text-theme-primary shadow-sm transition hover:border-[#00A4EF] hover:bg-theme-surface hover:shadow-md"
+                >
+                  {/* Isotipo Oficial Microsoft 4 Colores */}
+                  <div className="grid grid-cols-2 gap-0.5 h-4 w-4 shrink-0">
+                    <div className="bg-[#F25022] rounded-[1px]" />
+                    <div className="bg-[#7FBA00] rounded-[1px]" />
+                    <div className="bg-[#00A4EF] rounded-[1px]" />
+                    <div className="bg-[#FFB900] rounded-[1px]" />
+                  </div>
+                  <div className="flex flex-col items-start text-left sm:flex-row sm:items-center sm:gap-1.5">
+                    <span>Continuar con Cuenta Institucional Duoc UC</span>
+                    <span className="text-[10px] text-theme-secondary font-medium">
+                      (Microsoft 365)
                     </span>
                   </div>
+                </button>
 
-                  <form onSubmit={handleLoginSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-theme-primary">
-                        Correo Institucional o Usuario *
-                      </label>
-                      <div className="relative mt-1">
-                        <Mail className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-theme-secondary" />
-                        <input
-                          type="text"
-                          required
-                          value={loginEmailOrUser}
-                          onChange={(e) => setLoginEmailOrUser(e.target.value)}
-                          placeholder="tu.nombre@duocuc.cl o usuario"
-                          className="w-full rounded-xl border border-theme bg-theme-subtle py-2.5 pr-3.5 pl-10 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                        />
-                      </div>
-                    </div>
+                {/* Divisor Visual */}
+                <div className="relative my-4 flex items-center justify-center">
+                  <div className="w-full border-t border-theme" />
+                  <span className="absolute bg-theme-surface px-3 text-[10px] font-bold uppercase tracking-wider text-theme-secondary">
+                    o con tu correo institucional
+                  </span>
+                </div>
+              </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-theme-primary">
-                        Contraseña *
-                      </label>
-                      <div className="relative mt-1">
-                        <Lock className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-theme-secondary" />
-                        <input
-                          type="password"
-                          required
-                          value={loginPassword}
-                          onChange={(e) => setLoginPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full rounded-xl border border-theme bg-theme-subtle py-2.5 pr-3.5 pl-10 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1 text-xs">
-                      <span className="text-theme-secondary">
-                        ¿Olvidaste tu contraseña? Contacta a tu coordinador CITT.
-                      </span>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFB800] py-3 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
-                    >
-                      <span>{isLoading ? 'Autenticando...' : 'Entrar a CITT Connect'}</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </form>
+              {/* MENSAJES DE ESTADO / ALERTAS */}
+              {statusMessage && (
+                <div
+                  role="status"
+                  className={`mb-5 flex items-start gap-3 rounded-2xl border p-3.5 text-xs font-semibold ${
+                    statusMessage.type === 'success'
+                      ? 'border-[#43B02A]/40 bg-[#43B02A]/10 text-theme-primary'
+                      : statusMessage.type === 'error'
+                      ? 'border-red-500/40 bg-red-500/10 text-red-500'
+                      : 'border-[#307FE2]/40 bg-[#307FE2]/10 text-[#307FE2]'
+                  }`}
+                >
+                  {statusMessage.type === 'success' ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-[#43B02A]" />
+                  ) : statusMessage.type === 'error' ? (
+                    <XCircle className="h-4 w-4 shrink-0 text-red-500" />
+                  ) : (
+                    <Info className="h-4 w-4 shrink-0 text-[#307FE2]" />
+                  )}
+                  <p className="flex-1">{statusMessage.text}</p>
+                  <button
+                    type="button"
+                    onClick={() => setStatusMessage(null)}
+                    className="text-theme-secondary hover:text-theme-primary"
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
 
-              {/* TAB 2: FORMULARIO DE REGISTRO */}
-              {activeTab === 'register' && (
-                <div className="mt-6 space-y-4">
-                  {/* Botón Oficial Microsoft 365 Duoc UC */}
-                  <button
-                    type="button"
-                    onClick={handleMicrosoftAuth}
-                    disabled={isLoading}
-                    className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-theme bg-theme-subtle py-3 px-4 text-xs font-bold text-theme-primary shadow-sm transition hover:bg-theme-surface hover:border-[#FFB800] active:scale-[0.99]"
-                  >
-                    <svg className="h-4 w-4 shrink-0" viewBox="0 0 21 21">
-                      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
-                      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
-                      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
-                      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
-                    </svg>
-                    <span>Verificar Identidad con Microsoft 365 Duoc UC</span>
-                  </button>
-
-                  <div className="relative my-2 flex items-center justify-center">
-                    <div className="w-full border-t border-theme" />
-                    <span className="absolute bg-theme-surface px-3 text-[10px] font-bold text-theme-secondary uppercase tracking-wider">
-                      o registro manual institucional
-                    </span>
-                  </div>
-
-                  <form onSubmit={handleRegisterSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-theme-primary">
-                        Nombre Completo *
-                      </label>
+              {/* ========================================================= */}
+              {/* TAB 1: FORMULARIO DE INICIO DE SESIÓN                     */}
+              {/* ========================================================= */}
+              {activeTab === 'login' && (
+                <form onSubmit={handleLoginSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-theme-primary">
+                      Correo Institucional o Usuario *
+                    </label>
+                    <div className="relative mt-1">
                       <input
                         type="text"
                         required
-                        value={regFullName}
-                        onChange={(e) => setRegFullName(e.target.value)}
-                        placeholder="Ej. Valentina Soto Miranda"
-                        className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                        value={loginEmailOrUser}
+                        onChange={(e) => setLoginEmailOrUser(e.target.value)}
+                        placeholder="tu.nombre@duocuc.cl o usuario"
+                        className="w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none pl-9"
                       />
+                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-theme-secondary" />
                     </div>
+                  </div>
 
-                    <div>
+                  <div>
+                    <div className="flex items-center justify-between">
                       <label className="block text-xs font-bold text-theme-primary">
-                        Correo Electrónico Institucional *
+                        Contraseña *
                       </label>
-                      <input
-                        type="email"
-                        required
-                        value={regEmail}
-                        onChange={(e) => setRegEmail(e.target.value)}
-                        placeholder="nombre@duocuc.cl o @profesor.duoc.cl"
-                        className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                      />
-
-                      {/* Validación Reactiva del Dominio */}
-                      {regEmail && (
-                        <div className="mt-2 rounded-xl border border-theme bg-theme-subtle p-2.5 text-xs">
-                          <span
-                            style={{ color: domainInfo.badgeColor }}
-                            className="font-bold"
-                          >
-                            {domainInfo.badgeLabel}
-                          </span>
-                          <p className="text-[11px] text-theme-secondary mt-0.5">
-                            {domainInfo.description}
-                          </p>
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShowSupportModal(true)}
+                        className="text-[11px] font-semibold text-[#307FE2] hover:underline"
+                      >
+                        ¿Problemas para ingresar?
+                      </button>
                     </div>
+                    <div className="relative mt-1">
+                      <input
+                        type="password"
+                        required
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none pl-9"
+                      />
+                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-theme-secondary" />
+                    </div>
+                  </div>
 
-                    {/* Campo de Código de Invitación para dominios externos */}
-                    {domainInfo.requiresPartnerInvite && (
-                      <div className="space-y-2 rounded-2xl border border-[#E87722]/30 bg-[#E87722]/10 p-3.5">
-                        <label className="block text-xs font-bold text-theme-primary">
-                          Código de Invitación Partner Corporativo *
-                        </label>
-                        <p className="text-[11px] text-theme-secondary leading-relaxed">
-                          ⚠️ Al usar un correo no Duoc UC, es obligatorio ingresar un código de invitación oficial emitido por CITT o un Docente Duoc UC (ej. AWS-INNOVA-2026).
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <label className="flex items-center gap-2 text-theme-secondary cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="rounded border-theme text-[#FFB800] focus:ring-[#FFB800]"
+                      />
+                      <span>Recordar en este equipo</span>
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFB800] py-3 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
+                  >
+                    <span>{isLoading ? 'Autenticando...' : 'Ingresar al Ecosistema CITT'}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </form>
+              )}
+
+              {/* ========================================================= */}
+              {/* TAB 2: FORMULARIO DE REGISTRO INSTITUCIONAL               */}
+              {/* ========================================================= */}
+              {activeTab === 'register' && (
+                <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-theme-primary">
+                      Nombre Completo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regFullName}
+                      onChange={(e) => setRegFullName(e.target.value)}
+                      placeholder="Ej. Valentina Soto Miranda"
+                      className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-theme-primary">
+                      Correo Electrónico Institucional *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      placeholder="nombre@duocuc.cl o @profesor.duoc.cl"
+                      className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    />
+
+                    {/* Validación Reactiva del Dominio */}
+                    {regEmail && (
+                      <div className="mt-2 rounded-xl border border-theme bg-theme-subtle p-2.5 text-xs">
+                        <span
+                          style={{ color: domainInfo.badgeColor }}
+                          className="font-bold"
+                        >
+                          {domainInfo.badgeLabel}
+                        </span>
+                        <p className="text-[11px] text-theme-secondary mt-0.5">
+                          {domainInfo.description}
                         </p>
-                        <input
-                          type="text"
-                          required
-                          value={regInviteCode}
-                          onChange={(e) => setRegInviteCode(e.target.value)}
-                          placeholder="Ej. AWS-INNOVA-2026 o CITT-PARTNER-2026"
-                          className="w-full rounded-xl border border-theme bg-theme-surface px-3.5 py-2 text-xs font-medium uppercase text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                        />
                       </div>
                     )}
+                  </div>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
@@ -1008,7 +852,7 @@ export default function AccesoPage() {
 
                   <div>
                     <label className="block text-xs font-bold text-theme-primary">
-                      Carrera o Título Profesional *
+                      Carrera o Especialidad *
                     </label>
                     <input
                       type="text"
@@ -1036,69 +880,88 @@ export default function AccesoPage() {
 
                   <button
                     type="submit"
-                    disabled={isLoading}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFB800] py-3 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
+                    disabled={
+                      isLoading ||
+                      domainInfo.type === 'external' ||
+                      domainInfo.type === 'invalid'
+                    }
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFB800] py-3 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span>{isLoading ? 'Registrando...' : 'Crear Mi Credencial CITT'}</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </form>
-              </div>
-            )}
-
-              {/* TAB 3: VALIDACIÓN CÓDIGO PARTNER */}
-              {activeTab === 'partner-invite' && (
-                <form
-                  onSubmit={handleValidatePartnerCode}
-                  className="mt-6 space-y-4"
-                >
-                  <div>
-                    <label className="block text-xs font-bold text-theme-primary">
-                      Código de Invitación Partner *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={partnerCodeInput}
-                      onChange={(e) => setPartnerCodeInput(e.target.value)}
-                      placeholder="Ej. AWS-INNOVA-2026 o CITT-PARTNER-2026"
-                      className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium uppercase text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="rounded-xl border border-theme bg-theme-subtle p-3 text-xs text-theme-secondary space-y-1.5">
-                    <p className="font-bold text-theme-primary">
-                      Códigos demo precargados para evaluación:
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['AWS-INNOVA-2026', 'CITT-PARTNER-2026', 'SANTANDER-HUB-2026'].map(
-                        (code) => (
-                          <button
-                            key={code}
-                            type="button"
-                            onClick={() => setPartnerCodeInput(code)}
-                            className="rounded-lg border border-theme bg-theme-surface px-2.5 py-1 text-[11px] font-mono font-bold text-theme-primary hover:border-[#FFB800]"
-                          >
-                            {code}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFB800] py-3 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
-                  >
-                    <span>Validar Código & Continuar</span>
+                    <span>
+                      {isLoading ? 'Registrando...' : 'Crear Mi Credencial CITT'}
+                    </span>
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </form>
               )}
+
+              {/* Pie del Panel de Acceso */}
+              <div className="mt-6 border-t border-theme pt-4 text-center">
+                <p className="flex items-center justify-center gap-1.5 text-[11px] text-theme-secondary">
+                  <ShieldCheck className="h-3.5 w-3.5 text-[#107C41]" />
+                  <span>
+                    Acceso protegido con cifrado SSL y políticas de gobernanza Duoc UC.
+                  </span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* MODAL DE AYUDA / SOPORTE INSTITUCIONAL */}
+      {showSupportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card space-y-4">
+            <div className="flex items-center justify-between border-b border-theme pb-3">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5 text-[#307FE2]" />
+                <h3 className="text-sm font-black text-theme-primary">
+                  Soporte de Acceso Duoc UC
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSupportModal(false)}
+                className="text-theme-secondary hover:text-theme-primary text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-theme-secondary leading-relaxed">
+              <p>
+                <strong className="text-theme-primary">
+                  ¿Cómo ingreso si soy estudiante o docente?
+                </strong>{' '}
+                Te recomendamos hacer clic en el botón{' '}
+                <strong className="text-theme-primary">
+                  «Continuar con Cuenta Institucional Duoc UC (Microsoft 365)»
+                </strong>
+                . El sistema validará tu sesión automáticamente con las mismas
+                credenciales que utilizas en tu correo institucional o intranet.
+              </p>
+              <p>
+                <strong className="text-theme-primary">¿Empresas Partner?</strong>{' '}
+                El acceso a partners corporativos se efectúa de manera exclusiva
+                mediante invitación enviada directamente a su correo de convenio.
+              </p>
+              <p>
+                Si tienes problemas con tu contraseña de Microsoft 365,
+                comunícate con la mesa de ayuda institucional de tu sede Duoc UC.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowSupportModal(false)}
+              className="w-full rounded-xl bg-theme-subtle py-2.5 text-xs font-bold text-theme-primary hover:bg-theme-canvas transition"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
