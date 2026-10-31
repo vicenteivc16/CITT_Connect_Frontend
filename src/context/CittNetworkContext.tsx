@@ -19,6 +19,7 @@ interface CittNetworkContextValue {
   projects: CittProject[];
   posts: CittFeedPost[];
   activeUser: CittMemberProfile;
+  isAuthenticated: boolean;
   theme: ThemeMode;
   themeTokens: CittThemeTokens;
   setThemeMode: (mode: ThemeMode) => void;
@@ -49,7 +50,7 @@ const STORAGE_KEYS = {
   PROFILES: 'citt_connect_profiles_v4',
   PROJECTS: 'citt_connect_projects_v2',
   POSTS: 'citt_connect_posts_v3',
-  ACTIVE_USERNAME: 'citt_connect_active_user_v2',
+  ACTIVE_USERNAME: 'citt_connect_active_user_v3',
   THEME: 'citt_connect_theme_v2',
   CONNECTIONS: 'citt_connect_connections_v2',
 };
@@ -63,8 +64,8 @@ export function CittNetworkProvider({
     useState<CittMemberProfile[]>(INITIAL_PROFILES);
   const [projects, setProjects] = useState<CittProject[]>(INITIAL_PROJECTS);
   const [posts, setPosts] = useState<CittFeedPost[]>(INITIAL_POSTS);
-  const [activeUsername, setActiveUsername] =
-    useState<string>('vicente-vasquez');
+  const [activeUsername, setActiveUsername] = useState<string | null>(null);
+  const isAuthenticated = Boolean(activeUsername);
   const [theme, setTheme] = useState<ThemeMode>('light');
   const [connectedMemberIds, setConnectedMemberIds] = useState<string[]>([
     'usr-coordinador',
@@ -236,10 +237,9 @@ export function CittNetworkProvider({
   };
 
   const logoutMember = () => {
-    const defaultUser = profiles[0]?.username || 'vicente-vasquez';
-    setActiveUsername(defaultUser);
+    setActiveUsername(null);
     try {
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_USERNAME, defaultUser);
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_USERNAME);
     } catch {
       // ignore
     }
@@ -376,6 +376,7 @@ export function CittNetworkProvider({
         projects,
         posts,
         activeUser,
+        isAuthenticated,
         theme,
         themeTokens,
         setThemeMode,

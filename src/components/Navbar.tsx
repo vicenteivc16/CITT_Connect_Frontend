@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
@@ -10,6 +10,7 @@ import {
   ChevronDown,
   FolderGit2,
   LogIn,
+  LogOut,
   Moon,
   Newspaper,
   QrCode,
@@ -59,10 +60,13 @@ const NAV_ITEMS = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const {
     activeUser,
+    isAuthenticated,
     profiles,
     setActiveUserByUsername,
+    logoutMember,
     theme,
     setThemeMode,
     connectedMemberIds,
@@ -239,143 +243,159 @@ export function Navbar() {
               </button>
             </div>
 
-            <Dialog.Root open={qrModalOpen} onOpenChange={setQrModalOpen}>
-              <Dialog.Trigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-[#1A1A1A]/25 bg-[#FFB800] px-3.5 py-2 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1A1A1A]"
-                >
-                  <QrCode className="h-4 w-4 shrink-0" />
-                  <span className="hidden sm:inline">Mi Pase QR</span>
-                </button>
-              </Dialog.Trigger>
-
-              <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" />
-                <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[92vh] w-[94vw] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl focus:outline-none">
-                  <div className="mb-2.5 flex items-center justify-between px-1">
-                    <Dialog.Title className="text-sm font-bold text-white">
-                      Credencial Pública & Código QR ({activeUser.fullName})
-                    </Dialog.Title>
-                    <Dialog.Close asChild>
-                      <button
-                        type="button"
-                        aria-label="Cerrar modal"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-[#1A1A1A] text-white hover:border-[#FFB800]"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </Dialog.Close>
-                  </div>
-                  <PhygitalPassCard profile={activeUser} initialShowQR={true} />
-                </Dialog.Content>
-              </Dialog.Portal>
-            </Dialog.Root>
-
-            {/* Usuario Activo & Simulador de Rol */}
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <button
-                  type="button"
-                  className={`inline-flex items-center gap-2 whitespace-nowrap rounded-xl px-3 py-1.5 text-left text-xs text-theme-primary transition hover:border-[#FFB800] ${
-                    isTransparentTop
-                      ? 'border border-theme-strong bg-[#FFFFFF]/90 shadow-sm backdrop-blur-md dark:bg-[#141414]/90'
-                      : 'border border-theme bg-theme-surface'
-                  }`}
-                >
-                  <img
-                    src={activeUser.avatarUrl || '/assets/citt-logo.webp'}
-                    alt={activeUser.fullName}
-                    className="h-7 w-7 shrink-0 rounded-full object-cover"
-                  />
-                  <div className="hidden leading-tight sm:block">
-                    <p className="font-bold text-theme-primary">
-                      {activeUser.fullName.split(' ')[0]}
-                    </p>
-                    <p className="text-xs font-semibold text-theme-primary">
-                      {ROLE_CONFIG[activeUser.role].shortLabel}
-                    </p>
-                  </div>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-theme-secondary" />
-                </button>
-              </DropdownMenu.Trigger>
-
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                align="end"
-                sideOffset={8}
-                className="z-50 w-80 rounded-2xl border border-theme bg-theme-surface p-2.5 text-xs text-theme-primary shadow-theme-card"
+            {!isAuthenticated ? (
+              <Link
+                href="/acceso"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-4 py-2 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1A1A1A]"
               >
-                <div className="border-b border-theme px-3 py-2">
-                  <p className="font-bold text-theme-primary">
-                    Simulador de Sesión (6 Roles CITT)
-                  </p>
-                  <p className="mt-0.5 text-xs text-theme-secondary">
-                    Alterna entre perfiles para probar cada rol:
-                  </p>
-                </div>
-
-                <div className="mt-1.5 max-h-72 space-y-1 overflow-y-auto">
-                  {profiles.map((member) => {
-                    const isSelected = member.username === activeUser.username;
-                    return (
-                      <DropdownMenu.Item
-                        key={member.id}
-                        onSelect={() => setActiveUserByUsername(member.username)}
-                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 outline-none transition ${
-                          isSelected
-                            ? 'bg-theme-subtle font-bold text-theme-primary'
-                            : 'text-theme-primary hover:bg-theme-subtle/70'
-                        }`}
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                          <img
-                            src={member.avatarUrl || '/assets/citt-logo.webp'}
-                            alt={member.fullName}
-                            className="h-7 w-7 shrink-0 rounded-full object-cover"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-bold">
-                              {member.fullName}
-                            </p>
-                            <p className="truncate text-xs text-theme-secondary">
-                              {member.careerTitle}
-                            </p>
-                          </div>
-                        </div>
-                        <RoleBadge role={member.role} showTooltip={false} />
-                      </DropdownMenu.Item>
-                    );
-                  })}
-                </div>
-
-                <DropdownMenu.Separator className="my-2 h-px bg-theme-subtle" />
-
-                <div className="space-y-1.5">
-                  <DropdownMenu.Item asChild>
-                    <Link
-                      href="/acceso"
-                      className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-theme bg-theme-subtle px-3 py-2 text-xs font-bold text-theme-primary outline-none transition hover:border-[#FFB800] hover:bg-theme-surface"
+                <LogIn className="h-4 w-4" />
+                <span>Acceso / Iniciar Sesión</span>
+              </Link>
+            ) : (
+              <>
+                <Dialog.Root open={qrModalOpen} onOpenChange={setQrModalOpen}>
+                  <Dialog.Trigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-[#1A1A1A]/25 bg-[#FFB800] px-3.5 py-2 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1A1A1A]"
                     >
-                      <LogIn className="h-3.5 w-3.5 text-[#307FE2]" />
-                      <span>Acceso Institucional & Registro</span>
-                    </Link>
-                  </DropdownMenu.Item>
+                      <QrCode className="h-4 w-4 shrink-0" />
+                      <span className="hidden sm:inline">Mi Pase QR</span>
+                    </button>
+                  </Dialog.Trigger>
 
-                  <DropdownMenu.Item asChild>
-                    <Link
-                      href="/mi-perfil"
-                      className="flex w-full cursor-pointer items-center justify-center rounded-xl bg-[#FFB800] px-3 py-2 font-bold text-[#1A1A1A] outline-none transition hover:bg-[#ffc633]"
+                  <Dialog.Portal>
+                    <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" />
+                    <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[92vh] w-[94vw] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl focus:outline-none">
+                      <div className="mb-2.5 flex items-center justify-between px-1">
+                        <Dialog.Title className="text-sm font-bold text-white">
+                          Credencial Pública & Código QR ({activeUser.fullName})
+                        </Dialog.Title>
+                        <Dialog.Close asChild>
+                          <button
+                            type="button"
+                            aria-label="Cerrar modal"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-[#1A1A1A] text-white hover:border-[#FFB800]"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </Dialog.Close>
+                      </div>
+                      <PhygitalPassCard profile={activeUser} initialShowQR={true} />
+                    </Dialog.Content>
+                  </Dialog.Portal>
+                </Dialog.Root>
+
+                {/* Usuario Activo & Simulador de Rol */}
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button
+                      type="button"
+                      className={`inline-flex items-center gap-2 whitespace-nowrap rounded-xl px-3 py-1.5 text-left text-xs text-theme-primary transition hover:border-[#FFB800] ${
+                        isTransparentTop
+                          ? 'border border-theme-strong bg-[#FFFFFF]/90 shadow-sm backdrop-blur-md dark:bg-[#141414]/90'
+                          : 'border border-theme bg-theme-surface'
+                      }`}
                     >
-                      Editar mi credencial y generar QR
-                    </Link>
-                  </DropdownMenu.Item>
-                </div>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
+                      <img
+                        src={activeUser.avatarUrl || '/assets/citt-logo.webp'}
+                        alt={activeUser.fullName}
+                        className="h-7 w-7 shrink-0 rounded-full object-cover"
+                      />
+                      <div className="hidden leading-tight sm:block">
+                        <p className="font-bold text-theme-primary">
+                          {activeUser.fullName.split(' ')[0]}
+                        </p>
+                        <p className="text-xs font-semibold text-theme-primary">
+                          {ROLE_CONFIG[activeUser.role].shortLabel}
+                        </p>
+                      </div>
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-theme-secondary" />
+                    </button>
+                  </DropdownMenu.Trigger>
+
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      align="end"
+                      sideOffset={8}
+                      className="z-50 w-80 rounded-2xl border border-theme bg-theme-surface p-2.5 text-xs text-theme-primary shadow-theme-card"
+                    >
+                      <div className="border-b border-theme px-3 py-2">
+                        <p className="font-bold text-theme-primary">
+                          Simulador de Sesión (6 Roles CITT)
+                        </p>
+                        <p className="mt-0.5 text-xs text-theme-secondary">
+                          Alterna entre perfiles para probar cada rol:
+                        </p>
+                      </div>
+
+                      <div className="mt-1.5 max-h-72 space-y-1 overflow-y-auto">
+                        {profiles.map((member) => {
+                          const isSelected = member.username === activeUser.username;
+                          return (
+                            <DropdownMenu.Item
+                              key={member.id}
+                              onSelect={() => setActiveUserByUsername(member.username)}
+                              className={`flex cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 outline-none transition ${
+                                isSelected
+                                  ? 'bg-theme-subtle font-bold text-theme-primary'
+                                  : 'text-theme-primary hover:bg-theme-subtle/70'
+                              }`}
+                            >
+                              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                                <img
+                                  src={member.avatarUrl || '/assets/citt-logo.webp'}
+                                  alt={member.fullName}
+                                  className="h-7 w-7 shrink-0 rounded-full object-cover"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate font-bold">
+                                    {member.fullName}
+                                  </p>
+                                  <p className="truncate text-xs text-theme-secondary">
+                                    {member.careerTitle}
+                                  </p>
+                                </div>
+                              </div>
+                              <RoleBadge role={member.role} showTooltip={false} />
+                            </DropdownMenu.Item>
+                          );
+                        })}
+                      </div>
+
+                      <DropdownMenu.Separator className="my-2 h-px bg-theme-subtle" />
+
+                      <div className="space-y-1.5">
+                        <DropdownMenu.Item asChild>
+                          <Link
+                            href="/mi-perfil"
+                            className="flex w-full cursor-pointer items-center justify-center rounded-xl bg-[#FFB800] px-3 py-2 font-bold text-[#1A1A1A] outline-none transition hover:bg-[#ffc633]"
+                          >
+                            Editar mi credencial y generar QR
+                          </Link>
+                        </DropdownMenu.Item>
+
+                        <DropdownMenu.Item asChild>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              logoutMember();
+                              router.push('/acceso');
+                            }}
+                            className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-500 outline-none transition hover:bg-red-500 hover:text-white"
+                          >
+                            <LogOut className="h-3.5 w-3.5" />
+                            <span>Cerrar Sesión</span>
+                          </button>
+                        </DropdownMenu.Item>
+                      </div>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Responsive Tablet/Mobile Navigation Bar */}
       <div
