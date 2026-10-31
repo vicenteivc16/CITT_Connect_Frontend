@@ -424,6 +424,7 @@ export default function AccesoPage() {
       };
 
       registerMember(newMember);
+      setActiveUserByUsername(effectiveUsername);
 
       setStatusMessage({
         type: 'success',
