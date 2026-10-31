@@ -18,6 +18,7 @@ export default function PublicMemberProfilePage() {
     profiles,
     projects,
     posts,
+    activities,
     activeUser,
     isAuthenticated,
     isConnected,
@@ -89,6 +90,12 @@ export default function PublicMemberProfilePage() {
 
   const memberPosts = posts.filter(
     (post) => post.authorUsername === member.username
+  );
+
+  const memberActivities = activities.filter(
+    (act) =>
+      act.enrolledUsernames.includes(member.username) ||
+      act.instructorUsername === member.username
   );
 
   const sameCampusOrSchoolPeers = profiles.filter(
@@ -168,6 +175,7 @@ export default function PublicMemberProfilePage() {
           hasOwnProjects={memberProjects.length > 0}
           memberPosts={memberPosts}
           peers={peers}
+          memberActivities={memberActivities}
           isConnected={isConnected}
           onToggleConnection={(peerId) => {
             if (!isAuthenticated) {

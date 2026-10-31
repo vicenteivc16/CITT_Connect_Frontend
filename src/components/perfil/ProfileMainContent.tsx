@@ -6,20 +6,24 @@ import {
   ArrowUpRight,
   Award,
   Building2,
+  Calendar,
   Check,
+  Clock,
   Compass,
   FolderGit2,
   Github,
+  MapPin,
   Newspaper,
   Sparkles,
   UserPlus,
   Users,
 } from 'lucide-react';
-import { getCampusBySlug } from '@/data/citt-catalog';
+import { getCampusBySlug, getSchoolBySlug } from '@/data/citt-catalog';
 import {
   CittMemberProfile,
   CittProject,
   CittFeedPost,
+  CittActivity,
 } from '@/types/citt';
 import { RoleBadge, SchoolBadge } from '@/components/RoleBadge';
 
@@ -39,6 +43,7 @@ interface ProfileMainContentProps {
   hasOwnProjects: boolean;
   memberPosts: CittFeedPost[];
   peers: CittMemberProfile[];
+  memberActivities?: CittActivity[];
   isConnected: (id: string) => boolean;
   onToggleConnection: (id: string) => void;
 }
@@ -49,6 +54,7 @@ export function ProfileMainContent({
   hasOwnProjects,
   memberPosts,
   peers,
+  memberActivities,
   isConnected,
   onToggleConnection,
 }: ProfileMainContentProps) {
@@ -229,6 +235,84 @@ export function ProfileMainContent({
           })}
         </div>
       </section>
+
+      {/* Bloque 2.5: Talleres & Formación en Laboratorios CITT */}
+      {memberActivities && memberActivities.length > 0 && (
+        <section className="rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="inline-flex items-center gap-2.5 text-xl font-black text-theme-primary">
+                <Calendar className="h-5 w-5 text-[#FFB800]" />
+                <span>Talleres & Formación en Laboratorios CITT</span>
+              </h2>
+              <p className="mt-1 text-xs text-theme-secondary">
+                Actividades prácticas, especialización y transferencia tecnológica en Duoc UC.
+              </p>
+            </div>
+
+            <Link
+              href="/actividades"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-theme-subtle px-3.5 py-2 text-xs font-bold text-theme-primary transition hover:bg-[#FFB800] hover:text-[#1A1A1A]"
+            >
+              <span>Ver todas las actividades</span>
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {memberActivities.map((act) => {
+              const actSchool = getSchoolBySlug(act.schoolSlug);
+              const isInstructor = act.instructorUsername === member.username;
+
+              return (
+                <div
+                  key={act.id}
+                  className="rounded-2xl border border-theme bg-theme-subtle p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-theme-secondary">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: actSchool.primaryHex }}
+                      />
+                      {actSchool.name}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        isInstructor
+                          ? 'bg-[#FFB800]/20 text-[#FFB800]'
+                          : 'bg-[#43B02A]/20 text-[#43B02A]'
+                      }`}
+                    >
+                      {isInstructor ? 'Docente / Relator' : 'Participante Activo'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-bold text-theme-primary">
+                      {act.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-theme-secondary line-clamp-2">
+                      {act.description}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-theme pt-2.5 text-[11px]">
+                    <span className="text-theme-secondary flex items-center gap-1 truncate">
+                      <MapPin className="h-3 w-3 text-[#307FE2] shrink-0" />
+                      <span className="truncate">{act.roomLocation}</span>
+                    </span>
+                    <span className="font-bold text-theme-primary flex items-center gap-1 shrink-0">
+                      <Award className="h-3 w-3 text-[#FFB800] shrink-0" />
+                      {act.schedule.totalHoursCitt} Horas CITT
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Bloque 3: Publicaciones en el Muro & Miembros Relacionados de su Sede/Escuela */}
       <section className="rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card sm:p-8">
