@@ -982,9 +982,9 @@ Proyecto en **Fase 4: Transferencia Tecnológica** con patentes y validación é
     helpRequestDetails:
       'Tenemos el circuito RFID funcionando pero requerimos apoyo de estudiantes de Diseño Industrial para fabricar 5 carcasas ergonómicas.',
     coverImageUrl:
-      'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
     galleryImages: [
-      'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
       '/assets/banner-iot.webp',
     ],
     maturityStage: 'ideacion',
@@ -1279,7 +1279,7 @@ export const CITT_PINTEREST_PINS: CittPinterestPin[] = [
     caption:
       'Iteración de ergonomía y resistencia térmica junto a estudiantes de la Escuela de Diseño.',
     imageUrl:
-      'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
     imageHeightClass: 'h-64',
     tag: 'Diseño & Fabricación 3D',
     campusSlug: 'san-joaquin',
