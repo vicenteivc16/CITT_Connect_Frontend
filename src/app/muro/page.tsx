@@ -1,22 +1,22 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   ArrowRight,
-  BookOpen,
-  Building2,
+  Bookmark,
   Calendar,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Compass,
   ExternalLink,
   Flame,
   Globe,
-  HandHelping,
+  GraduationCap,
   Layers,
-  LogIn,
   MapPin,
   Megaphone,
   Newspaper,
@@ -25,1378 +25,1045 @@ import {
   Radio,
   Search,
   Share2,
+  ShieldCheck,
   Sparkles,
   Tag,
-  Trash2,
   User,
   Users,
   X,
 } from 'lucide-react';
 import { useCittNetwork } from '@/context/CittNetworkContext';
 import {
-  CITT_BLOG_ARTICLES,
   CITT_CAMPUSES,
+  DUOC_SCHOOLS,
+  ROLE_CONFIG,
   getCampusBySlug,
+  getSchoolBySlug,
 } from '@/data/citt-catalog';
 import { RoleBadge } from '@/components/RoleBadge';
-import { CittBlogArticle, CittFeedPost, CittRole } from '@/types/citt';
+import { CittFeedPost, DuocSchoolSlug } from '@/types/citt';
+import { NewsItem } from '@/app/api/news/route';
 
-const CATEGORY_META: Record<
-  CittFeedPost['category'],
-  { label: string; sectionName: string; accent: string }
-> = {
-  noticia_citt: {
-    label: 'Noticia CITT',
-    sectionName: 'INNOVACIÓN & CIENCIA',
-    accent: '#307FE2',
-  },
-  evento_nacional: {
-    label: 'Evento Nacional',
-    sectionName: 'TORNEOS & HACKATHONS',
-    accent: '#FFB800',
-  },
-  oportunidad_partner: {
-    label: 'Oportunidad Partner',
-    sectionName: 'MERCADO & EMPRESAS',
-    accent: '#AC4FC6',
-  },
-  puente_consejero: {
-    label: 'Puente Consejero',
-    sectionName: 'TRIBUNA ESTUDIANTIL',
-    accent: '#00A499',
-  },
-  pedir_ayuda: {
-    label: 'Cable Urgente / SOS',
-    sectionName: 'CLASIFICADOS & CABLES',
-    accent: '#E87722',
-  },
-};
-
-type NewsDesk =
-  | 'todos'
-  | 'innovacion'
-  | 'partners'
-  | 'consejeros'
-  | 'cables'
-  | 'reportajes';
+type FilterDesk = 'todas' | 'chile' | 'internacional' | DuocSchoolSlug | 'comunidad';
 
 export default function NationalGazettePage() {
-  const router = useRouter();
-  const { posts, activeUser, isAuthenticated, addPost, deletePost } =
-    useCittNetwork();
+  const { posts, activeUser, isAuthenticated, addPost } = useCittNetwork();
 
-  // State
-  const [activeDesk, setActiveDesk] = useState<NewsDesk>('todos');
+  // News API State
+  const [newsArticles, setNewsArticles] = useState<NewsItem[]>([]);
+  const [isLoadingNews, setIsLoadingNews] = useState(true);
+
+  // Filter State
+  const [activeDesk, setActiveDesk] = useState<FilterDesk>('todas');
   const [selectedCampus, setSelectedCampus] = useState<string>('todas');
   const [searchQuery, setSearchQuery] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [readingArticle, setReadingArticle] = useState<CittBlogArticle | null>(
-    null
-  );
-  const [readingPost, setReadingPost] = useState<CittFeedPost | null>(null);
 
-  // Form state
-  const [title, setTitle] = useState('');
-  const [subtitle, setSubtitle] = useState('');
-  const [content, setContent] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [category, setCategory] =
+  // Hero School Carousel State
+  const [heroSchoolIndex, setHeroSchoolIndex] = useState(0);
+  const [isHeroPaused, setIsHeroPaused] = useState(false);
+
+  // Modals
+  const [readingArticle, setReadingArticle] = useState<NewsItem | null>(null);
+  const [readingCommunityPost, setReadingCommunityPost] =
+    useState<CittFeedPost | null>(null);
+  const [composeModalOpen, setComposeModalOpen] = useState(false);
+
+  // Compose Post State
+  const [postTitle, setPostTitle] = useState('');
+  const [postSubtitle, setPostSubtitle] = useState('');
+  const [postContent, setPostContent] = useState('');
+  const [postImageUrl, setPostImageUrl] = useState('');
+  const [postCategory, setPostCategory] =
     useState<CittFeedPost['category']>('noticia_citt');
-  const [isLeadStory, setIsLeadStory] = useState(false);
-  const [actionLabel, setActionLabel] = useState('');
-  const [actionUrl, setActionUrl] = useState('');
+  const [postCampus, setPostCampus] = useState('san-joaquin');
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Available categories by role
-  const availableCategories = useMemo(() => {
-    const all: Array<{ value: CittFeedPost['category']; label: string }> = [
-      {
-        value: 'noticia_citt',
-        label: 'Innovación & Proyectos CITT (Logro o Avance)',
-      },
-      {
-        value: 'oportunidad_partner',
-        label: 'Mercado & Partners (Práctica, Mentoría o Vacante)',
-      },
-      {
-        value: 'puente_consejero',
-        label: 'Tribuna Consejeros de Carrera (Puente Inter-Escuelas)',
-      },
-      {
-        value: 'evento_nacional',
-        label: 'Agenda Nacional (Hackathon, Torneo o Charla)',
-      },
-      {
-        value: 'pedir_ayuda',
-        label: 'Cable Urgente / Clasificado SOS (Ayuda Inmediata)',
-      },
-    ];
-
-    if (!isAuthenticated) return all;
-    const role = activeUser.role;
-    if (role === 'dev' || role === 'personal_duoc') return all;
-    if (role === 'lider_citt') {
-      return all.filter((c) =>
-        ['noticia_citt', 'evento_nacional', 'pedir_ayuda'].includes(c.value)
-      );
-    }
-    if (role === 'consejero_carrera') {
-      return all.filter((c) =>
-        ['puente_consejero', 'noticia_citt', 'pedir_ayuda'].includes(c.value)
-      );
-    }
-    if (role === 'partner') {
-      return all.filter((c) =>
-        ['oportunidad_partner', 'noticia_citt'].includes(c.value)
-      );
-    }
-    return all.filter((c) =>
-      ['noticia_citt', 'pedir_ayuda'].includes(c.value)
-    );
-  }, [activeUser.role, isAuthenticated]);
-
-  const canMarkLeadStory =
-    isAuthenticated &&
-    (activeUser.role === 'dev' || activeUser.role === 'personal_duoc');
-
-  // Breaking news ticker items
-  const tickerItems = useMemo(() => {
-    return posts.slice(0, 6).map((p) => ({
-      id: p.id,
-      title: p.title,
-      campus: getCampusBySlug(p.campusSlug).shortName,
-      category: CATEGORY_META[p.category].sectionName,
-    }));
-  }, [posts]);
-
-  // Duplicar para loop continuo sin saltos visuales
-  const marqueeItems = useMemo(() => {
-    return [...tickerItems, ...tickerItems];
-  }, [tickerItems]);
-
-  // Filtering posts by desk, campus and search
-  const filteredPosts = useMemo(() => {
-    return posts.filter((post) => {
-      // Desk filtering
-      if (activeDesk === 'innovacion') {
-        if (
-          post.category !== 'noticia_citt' &&
-          post.category !== 'evento_nacional'
-        ) {
-          return false;
+  // Fetch news from /api/news
+  useEffect(() => {
+    let isMounted = true;
+    async function loadNews() {
+      try {
+        setIsLoadingNews(true);
+        const res = await fetch('/api/news');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.articles) {
+            setNewsArticles(data.articles);
+          }
         }
-      } else if (activeDesk === 'partners') {
-        if (post.category !== 'oportunidad_partner') return false;
-      } else if (activeDesk === 'consejeros') {
-        if (post.category !== 'puente_consejero') return false;
-      } else if (activeDesk === 'cables') {
-        if (post.category !== 'pedir_ayuda') return false;
+      } catch (err) {
+        console.warn('Error al cargar noticias de /api/news:', err);
+      } finally {
+        if (isMounted) setIsLoadingNews(false);
       }
+    }
+    loadNews();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-      // Campus filtering
-      if (selectedCampus !== 'todas' && post.campusSlug !== selectedCampus) {
+  // Hero carousel auto-advance (9 schools)
+  useEffect(() => {
+    if (isHeroPaused) return;
+    const interval = setInterval(() => {
+      setHeroSchoolIndex((prev) => (prev + 1) % DUOC_SCHOOLS.length);
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [isHeroPaused]);
+
+  // Current school in the hero carousel
+  const currentHeroSchool = DUOC_SCHOOLS[heroSchoolIndex];
+
+  // Featured article for current hero school
+  const currentHeroArticle = useMemo(() => {
+    const forSchool = newsArticles.find(
+      (a) => a.schoolSlug === currentHeroSchool.slug && a.isHeroFeatured
+    );
+    if (forSchool) return forSchool;
+    const fallbackForSchool = newsArticles.find(
+      (a) => a.schoolSlug === currentHeroSchool.slug
+    );
+    if (fallbackForSchool) return fallbackForSchool;
+    return newsArticles[0] || null;
+  }, [newsArticles, currentHeroSchool]);
+
+  // Breaking ticker headlines (Chile & World)
+  const tickerHeadlines = useMemo(() => {
+    if (newsArticles.length === 0) {
+      return [
+        'Chile lidera adopción de inteligencia artificial y ciberseguridad en Sudamérica',
+        'Duoc UC despliega 18 hubs CITT inter-sedes para proyectos de I+D aplicada',
+        'Estudiantes de Ingeniería prueban microrredes solares en el desierto de Atacama',
+      ];
+    }
+    return newsArticles.slice(0, 8).map((a) => `${a.regionLabel}: ${a.title}`);
+  }, [newsArticles]);
+
+  // Filtered articles list
+  const filteredArticles = useMemo(() => {
+    return newsArticles.filter((art) => {
+      // Desk Filter
+      if (activeDesk === 'chile' && art.region !== 'chile') return false;
+      if (activeDesk === 'internacional' && art.region !== 'internacional')
+        return false;
+      if (
+        activeDesk !== 'todas' &&
+        activeDesk !== 'chile' &&
+        activeDesk !== 'internacional' &&
+        activeDesk !== 'comunidad' &&
+        art.schoolSlug !== activeDesk
+      ) {
         return false;
       }
 
-      // Search query
+      // Search Query
       if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-        const matchesTitle = post.title.toLowerCase().includes(query);
-        const matchesSubtitle = post.subtitle?.toLowerCase().includes(query);
-        const matchesContent = post.content.toLowerCase().includes(query);
-        const matchesAuthor = post.authorName.toLowerCase().includes(query);
-        const campus = getCampusBySlug(post.campusSlug);
-        const matchesCampus = campus.name.toLowerCase().includes(query);
-
-        if (
-          !matchesTitle &&
-          !matchesSubtitle &&
-          !matchesContent &&
-          !matchesAuthor &&
-          !matchesCampus
-        ) {
-          return false;
-        }
+        const q = searchQuery.toLowerCase();
+        const matches =
+          art.title.toLowerCase().includes(q) ||
+          art.subtitle.toLowerCase().includes(q) ||
+          art.content.toLowerCase().includes(q) ||
+          art.schoolName.toLowerCase().includes(q) ||
+          art.tags.some((t) => t.toLowerCase().includes(q));
+        if (!matches) return false;
       }
 
       return true;
     });
-  }, [posts, activeDesk, selectedCampus, searchQuery]);
+  }, [newsArticles, activeDesk, searchQuery]);
 
-  // Lead Story (Primera Plana)
-  const leadStory = useMemo(() => {
-    if (activeDesk === 'reportajes') return null;
-    return (
-      filteredPosts.find((p) => p.isLeadStory) ||
-      filteredPosts.find((p) => p.imageUrl) ||
-      filteredPosts[0] ||
-      null
-    );
-  }, [filteredPosts, activeDesk]);
+  // Community posts filtered by campus
+  const communityPosts = useMemo(() => {
+    return posts.filter((p) => {
+      if (selectedCampus !== 'todas' && p.campusSlug !== selectedCampus) {
+        return false;
+      }
+      return true;
+    });
+  }, [posts, selectedCampus]);
 
-  // Secondary Stories (Segunda Plana)
-  const secondaryStories = useMemo(() => {
-    if (!leadStory) return [];
-    return filteredPosts
-      .filter((p) => p.id !== leadStory.id && p.category !== 'pedir_ayuda')
-      .slice(0, 4);
-  }, [filteredPosts, leadStory]);
-
-  // Urgent Cables (Clasificados / Cables Rápidos)
-  const urgentCables = useMemo(() => {
-    return posts.filter((p) => p.category === 'pedir_ayuda');
-  }, [posts]);
-
-  const handlePublish = (e: React.FormEvent) => {
+  // Handle compose post submission
+  const handleComposeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      router.push('/acceso?redirect=/muro');
-      return;
-    }
-    if (!title.trim() || !content.trim()) return;
+    if (!postTitle.trim() || !postContent.trim()) return;
 
     addPost({
-      authorUsername: activeUser.username,
+      title: postTitle.trim(),
+      subtitle: postSubtitle.trim() || undefined,
+      content: postContent.trim(),
       authorName: activeUser.fullName,
+      authorUsername: activeUser.username,
       authorRole: activeUser.role,
-      authorOccupation: activeUser.currentOccupation,
-      campusSlug: activeUser.campusSlug,
-      category,
-      title: title.trim(),
-      subtitle: subtitle.trim() || undefined,
-      content: content.trim(),
-      imageUrl: imageUrl.trim() || undefined,
-      isLeadStory: canMarkLeadStory ? isLeadStory : false,
-      readTime: '2 min de lectura',
-      actionLabel:
-        actionLabel.trim() ||
-        (category === 'oportunidad_partner'
-          ? 'Postular a la vacante'
-          : category === 'pedir_ayuda'
-          ? 'Responder al cable'
-          : `Contactar a ${activeUser.fullName.split(' ')[0]}`),
-      actionUrl: actionUrl.trim() || `/u/${activeUser.username}`,
+      authorOccupation: activeUser.currentOccupation || 'Miembro CITT',
+      campusSlug: postCampus,
+      category: postCategory,
+      imageUrl: postImageUrl.trim() || undefined,
     });
 
-    // Reset form
-    setTitle('');
-    setSubtitle('');
-    setContent('');
-    setImageUrl('');
-    setActionLabel('');
-    setActionUrl('');
-    setIsLeadStory(false);
-    setCategory('noticia_citt');
-    setModalOpen(false);
+    setStatusMessage('¡Despacho de sede publicado exitosamente en la Gaceta CITT!');
+    setPostTitle('');
+    setPostSubtitle('');
+    setPostContent('');
+    setPostImageUrl('');
+    setComposeModalOpen(false);
+    setTimeout(() => setStatusMessage(null), 4000);
   };
 
   return (
-    <div className="space-y-8 pb-16">
-      {/* 1. CABECERA DE PRENSA / MASTHEAD CITT */}
-      <header className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card">
-        {/* Barra Superior de Metadatos de Edición */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-theme pb-3 text-[11px] font-semibold text-theme-secondary uppercase tracking-wider">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 text-theme-primary">
-              <Calendar className="h-3.5 w-3.5 text-[#FFB800]" />
-              <span>Viernes, 30 de Octubre de 2026</span>
-            </span>
-            <span className="hidden sm:inline">·</span>
-            <span>Año IV · Edición Nacional N° 42</span>
-            <span className="hidden sm:inline">·</span>
-            <span className="inline-flex items-center gap-1 text-theme-primary">
-              <Globe className="h-3 w-3 text-[#307FE2]" />
-              <span>18 Sedes Conectadas</span>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-[#43B02A]">
-              <Radio className="h-3 w-3 animate-pulse" />
-              <span>Red En Línea</span>
-            </span>
-            <span>·</span>
-            <span>Circulación Abierta Duoc UC</span>
-          </div>
-        </div>
-
-        {/* Nombre Central del Periódico (The Gazette Nameplate) */}
-        <div className="my-6 border-y-2 border-theme py-5 text-center">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:text-left">
-            <div className="space-y-1">
-              <h1 className="font-serif text-3xl font-black tracking-tight text-theme-primary sm:text-5xl lg:text-6xl">
-                LA GACETA CITT
-              </h1>
-              <p className="text-xs font-medium text-theme-secondary sm:text-sm">
-                Diario Oficial de Innovación, Transferencia Tecnológica y Vinculación Estudiantil · Duoc UC
-              </p>
+    <div className="min-h-screen bg-theme-canvas pt-20 pb-20 text-theme-primary transition-colors duration-200">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+        {/* ========================================================= */}
+        {/* 1. MASTHEAD ESTILO WASHINGTON POST · GRAN PRENSA DUOC UC   */}
+        {/* ========================================================= */}
+        <header className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card text-center space-y-4">
+          {/* Fila Superior: Fechador Chileno, Telemetría y Botón de Publicación */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-theme pb-4 text-xs font-semibold text-theme-secondary">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-theme-primary">
+                Sábado, 31 de Octubre de 2026
+              </span>
+              <span>·</span>
+              <span>Edición Nacional Nº 1,428</span>
+              <span>·</span>
+              <span className="rounded-full bg-[#107C41]/15 px-2.5 py-0.5 text-[11px] font-bold text-[#107C41]">
+                ● 18 Sedes Conectadas
+              </span>
             </div>
 
-            {/* Botón CTA Redactar Noticia */}
-            <Dialog.Root open={modalOpen} onOpenChange={setModalOpen}>
-              <Dialog.Trigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-[#FFB800] px-5 py-3.5 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633] hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <PenTool className="h-4 w-4" />
-                  <span>Redactar Noticia / Enviar Cable</span>
-                </button>
-              </Dialog.Trigger>
-
-              <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm" />
-                <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[92vh] w-[94vw] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 text-theme-primary shadow-2xl focus:outline-none sm:p-8">
-                  <div className="flex items-center justify-between border-b border-theme pb-4">
-                    <div>
-                      <Dialog.Title className="font-serif text-lg font-black text-theme-primary">
-                        Enviar Noticia o Cable a Redacción
-                      </Dialog.Title>
-                      <p className="text-xs text-theme-secondary">
-                        Se publicará en la edición nacional con tu firma de corresponsal
-                      </p>
-                    </div>
-                    <Dialog.Close asChild>
-                      <button
-                        type="button"
-                        aria-label="Cerrar modal"
-                        className="rounded-xl p-1.5 text-theme-secondary hover:bg-theme-subtle hover:text-theme-primary"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </Dialog.Close>
-                  </div>
-
-                  {!isAuthenticated ? (
-                    <div className="py-8 text-center space-y-4">
-                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFB800]/15 text-[#FFB800]">
-                        <PenTool className="h-7 w-7" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <h4 className="font-serif text-base font-bold text-theme-primary">
-                          Identificación Requerida para Redacción
-                        </h4>
-                        <p className="mx-auto max-w-md text-xs text-theme-secondary leading-relaxed">
-                          Para despachar noticias institucionales, convocatorias abiertas o cables de ayuda SOS en La Gaceta CITT, debes ingresar con tu cuenta Duoc UC.
-                        </p>
-                      </div>
-                      <div className="pt-2 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                        <Link
-                          href="/acceso?redirect=/muro"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
-                        >
-                          <LogIn className="h-4 w-4" />
-                          <span>Iniciar Sesión / Registrarme</span>
-                        </Link>
-                        <Dialog.Close asChild>
-                          <button
-                            type="button"
-                            className="rounded-xl border border-theme px-4 py-2.5 text-xs font-semibold text-theme-secondary hover:bg-theme-subtle hover:text-theme-primary"
-                          >
-                            Cerrar
-                          </button>
-                        </Dialog.Close>
-                      </div>
-                    </div>
-                  ) : (
-                    <form onSubmit={handlePublish} className="mt-5 space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-theme-primary">
-                          Sección / Desk Periodístico *
-                        </label>
-                        <select
-                          value={category}
-                          onChange={(e) =>
-                            setCategory(
-                              e.target.value as CittFeedPost['category']
-                            )
-                          }
-                          className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                        >
-                          {availableCategories.map((c) => (
-                            <option key={c.value} value={c.value}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {canMarkLeadStory && (
-                        <div className="flex items-center gap-2.5 rounded-xl border border-[#FFB800]/40 bg-[#FFB800]/10 p-3">
-                          <input
-                            type="checkbox"
-                            id="lead-story-toggle"
-                            checked={isLeadStory}
-                            onChange={(e) => setIsLeadStory(e.target.checked)}
-                            className="h-4 w-4 rounded border-theme text-[#FFB800] focus:ring-[#FFB800]"
-                          />
-                          <label
-                            htmlFor="lead-story-toggle"
-                            className="cursor-pointer text-xs font-bold text-theme-primary"
-                          >
-                            ⭐ Marcar como Gran Titular de Portada (Lead Story Nacional)
-                          </label>
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="block text-xs font-bold text-theme-primary">
-                          Titular de Prensa *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                          placeholder="Ej. Estudiantes de Sede Maipú Diseñan Simulador de Rescate Minero..."
-                          className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                        />
-                      </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-theme-primary">
-                        Bajada de Noticia / Subtítulo (Opcional)
-                      </label>
-                      <input
-                        type="text"
-                        value={subtitle}
-                        onChange={(e) => setSubtitle(e.target.value)}
-                        placeholder="Breve resumen explicativo que acompaña al titular..."
-                        className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-theme-primary">
-                        Cuerpo del Artículo / Crónica *
-                      </label>
-                      <textarea
-                        rows={4}
-                        required
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Redacta la crónica con los detalles, antecedentes y cómo sumarse..."
-                        className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-theme-primary">
-                        URL de Fotografía Editorial (Opcional)
-                      </label>
-                      <input
-                        type="url"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="https://images.unsplash.com/... o enlace de imagen pública"
-                        className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="block text-xs font-bold text-theme-primary">
-                          Texto del Botón de Acción
-                        </label>
-                        <input
-                          type="text"
-                          value={actionLabel}
-                          onChange={(e) => setActionLabel(e.target.value)}
-                          placeholder="Ej. Postular con perfil CITT"
-                          className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-theme-primary">
-                          Enlace de Destino (Opcional)
-                        </label>
-                        <input
-                          type="text"
-                          value={actionUrl}
-                          onChange={(e) => setActionUrl(e.target.value)}
-                          placeholder="/proyectos/... o URL externa"
-                          className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Previsualización del Byline */}
-                    <div className="rounded-xl border border-theme bg-theme-subtle p-3 text-[11px] text-theme-secondary">
-                      <span>Firma editorial:{' '}</span>
-                      <strong className="text-theme-primary">
-                        Por {activeUser.fullName}
-                      </strong>
-                      <span>, {activeUser.currentOccupation} · {getCampusBySlug(activeUser.campusSlug).name}</span>
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Dialog.Close asChild>
-                        <button
-                          type="button"
-                          className="rounded-xl border border-theme px-4 py-2 text-xs font-semibold text-theme-primary hover:bg-theme-subtle"
-                        >
-                          Cancelar
-                        </button>
-                      </Dialog.Close>
-                      <button
-                        type="submit"
-                        className="rounded-xl bg-[#FFB800] px-5 py-2 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
-                      >
-                        Publicar en La Gaceta
-                      </button>
-                    </div>
-                  </form>
-                )}
-                </Dialog.Content>
-              </Dialog.Portal>
-            </Dialog.Root>
-          </div>
-        </div>
-
-        {/* Cintillo / Ticker de Último Minuto con Desplazamiento Infinito */}
-        <div className="relative flex items-center gap-3 overflow-hidden rounded-2xl border border-theme bg-theme-subtle p-2.5">
-          <span className="relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#FFB800] px-3 py-1 text-xs font-black text-[#1A1A1A] shadow-sm">
-            <Flame className="h-3.5 w-3.5 text-[#1A1A1A]" />
-            <span>ÚLTIMO MINUTO</span>
-          </span>
-
-          {/* Gradientes laterales de desvanecimiento para entrada y salida suave */}
-          <div className="pointer-events-none absolute top-0 bottom-0 left-[142px] z-10 w-6 bg-gradient-to-r from-theme-subtle to-transparent" />
-          <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-theme-subtle to-transparent" />
-
-          {/* Track en movimiento continuo infinito (pausa al pasar el cursor) */}
-          <div
-            className="flex-1 overflow-hidden"
-            title="Pasa el cursor por encima para pausar la lectura"
-          >
-            <div className="animate-ticker-infinite flex items-center gap-8 text-xs whitespace-nowrap">
-              {marqueeItems.map((item, idx) => (
-                <span
-                  key={`${item.id}-${idx}`}
-                  className="inline-flex items-center gap-2 cursor-pointer transition hover:text-[#307FE2]"
-                  onClick={() => setSearchQuery(item.title.slice(0, 20))}
-                >
-                  <span className="font-bold text-[#307FE2]">
-                    [{item.category}]
-                  </span>
-                  <span className="font-medium text-theme-primary">
-                    {item.title}
-                  </span>
-                  <span className="text-[10px] text-theme-secondary font-semibold">
-                    ({item.campus})
-                  </span>
-                  <span className="text-theme-secondary/40 select-none">·</span>
-                </span>
-              ))}
+            <div className="flex items-center gap-3">
+              <span className="hidden md:inline-block text-[11px] text-theme-secondary/80">
+                SGO 22°C · CCP 19°C · VÑA 18°C · PMC 15°C
+              </span>
+              <button
+                type="button"
+                onClick={() => setComposeModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FFB800] px-3.5 py-1.5 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Redactar Despacho / Noticia</span>
+              </button>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* 2. SECCIONES PERIODÍSTICAS (DESK TABS) & BÚSQUEDA */}
-      <nav aria-label="Secciones de La Gaceta" className="space-y-4 rounded-3xl border border-theme bg-theme-surface p-4 sm:p-5 shadow-theme-card">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          {/* Desk Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setActiveDesk('todos')}
-              className={`rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                activeDesk === 'todos'
-                  ? 'bg-[#FFB800] text-[#1A1A1A]'
-                  : 'border border-theme bg-theme-subtle text-theme-primary hover:bg-theme-elevated'
-              }`}
-            >
-              Portada General ({posts.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveDesk('innovacion')}
-              className={`rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                activeDesk === 'innovacion'
-                  ? 'bg-[#FFB800] text-[#1A1A1A]'
-                  : 'border border-theme bg-theme-subtle text-theme-primary hover:bg-theme-elevated'
-              }`}
-            >
-              Innovación & CITT
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveDesk('partners')}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                activeDesk === 'partners'
-                  ? 'bg-[#FFB800] text-[#1A1A1A]'
-                  : 'border border-theme bg-theme-subtle text-theme-primary hover:bg-theme-elevated'
-              }`}
-            >
-              <Building2 className="h-3.5 w-3.5" />
-              <span>Mercado & Partners</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveDesk('consejeros')}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                activeDesk === 'consejeros'
-                  ? 'bg-[#FFB800] text-[#1A1A1A]'
-                  : 'border border-theme bg-theme-subtle text-theme-primary hover:bg-theme-elevated'
-              }`}
-            >
-              <Compass className="h-3.5 w-3.5" />
-              <span>Tribuna Consejeros</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveDesk('cables')}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                activeDesk === 'cables'
-                  ? 'bg-[#FFB800] text-[#1A1A1A]'
-                  : 'border border-theme bg-theme-subtle text-theme-primary hover:bg-theme-elevated'
-              }`}
-            >
-              <Radio className="h-3.5 w-3.5" />
-              <span>Cables SOS</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveDesk('reportajes')}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                activeDesk === 'reportajes'
-                  ? 'bg-[#FFB800] text-[#1A1A1A]'
-                  : 'border border-theme bg-theme-subtle text-theme-primary hover:bg-theme-elevated'
-              }`}
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              <span>Crónicas a Fondo ({CITT_BLOG_ARTICLES.length})</span>
-            </button>
-          </div>
-
-          {/* Buscador & Selector de Sede */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-theme-secondary" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por titular, autor o tema..."
-                className="w-full rounded-xl border border-theme bg-theme-subtle py-1.5 pr-8 pl-9 text-xs text-theme-primary placeholder-theme-secondary focus:border-[#FFB800] focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute top-1/2 right-2.5 -translate-y-1/2 text-theme-secondary hover:text-theme-primary"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            <select
-              value={selectedCampus}
-              onChange={(e) => setSelectedCampus(e.target.value)}
-              className="rounded-xl border border-theme bg-theme-subtle px-3 py-1.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-            >
-              <option value="todas">Todas las Sedes</option>
-              {CITT_CAMPUSES.map((c) => (
-                <option key={c.slug} value={c.slug}>
-                  {c.shortName}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </nav>
-
-      {/* 3. RETÍCULA ASIMÉTRICA DE PRIMERA PLANA */}
-      {activeDesk !== 'reportajes' && (
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          {/* COLUMNA PRINCIPAL (8 COLS): GRAN TITULAR DE PORTADA + SEGUNDA PLANA */}
-          <main className="space-y-8 lg:col-span-8">
-            {/* A. GRAN TITULAR DE PORTADA (LEAD STORY) */}
-            {leadStory && (
-              <article className="overflow-hidden rounded-3xl border border-theme bg-theme-surface shadow-theme-card">
-                {leadStory.imageUrl && (
-                  <div className="relative aspect-video w-full overflow-hidden bg-black">
-                    <img
-                      src={leadStory.imageUrl}
-                      alt={leadStory.title}
-                      className="h-full w-full object-cover transition-transform duration-500 hover:scale-105 opacity-90"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-
-                    <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-[#FFB800] px-3 py-1 text-xs font-black text-[#1A1A1A] shadow-md">
-                        GRAN TITULAR DE PORTADA
-                      </span>
-                      <span className="rounded-full border border-white/20 bg-black/60 px-3 py-1 text-xs font-bold text-white backdrop-blur-md">
-                        {CATEGORY_META[leadStory.category].sectionName}
-                      </span>
-                    </div>
-
-                    <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-xs text-white/80">
-                      <span className="inline-flex items-center gap-1 font-medium">
-                        <MapPin className="h-3.5 w-3.5 text-[#307FE2]" />
-                        <span>{getCampusBySlug(leadStory.campusSlug).name}</span>
-                      </span>
-                      {leadStory.readTime && (
-                        <span className="inline-flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{leadStory.readTime}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="p-6 sm:p-8 space-y-4">
-                  <div>
-                    <h2 className="font-serif text-2xl font-bold leading-tight text-theme-primary sm:text-3xl lg:text-4xl">
-                      {leadStory.title}
-                    </h2>
-                    {leadStory.subtitle && (
-                      <p className="mt-3 text-sm font-semibold leading-relaxed text-theme-primary/90 sm:text-base">
-                        {leadStory.subtitle}
-                      </p>
-                    )}
-                  </div>
-
-                  <p className="text-sm leading-relaxed text-theme-secondary sm:text-base">
-                    {leadStory.content}
-                  </p>
-
-                  {/* Byline Periodístico, Acciones y Botón de Lectura */}
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-t border-theme pt-4">
-                    <div className="flex items-center gap-3">
-                      <RoleBadge role={leadStory.authorRole} showTooltip={false} />
-                      <div className="text-xs">
-                        <p className="font-bold text-theme-primary">
-                          Por{' '}
-                          <Link
-                            href={`/u/${leadStory.authorUsername}`}
-                            className="hover:underline"
-                          >
-                            {leadStory.authorName}
-                          </Link>
-                        </p>
-                        <p className="text-[11px] text-theme-secondary">
-                          {leadStory.authorOccupation} · {leadStory.createdAt}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      {isAuthenticated &&
-                        (activeUser.username === leadStory.authorUsername ||
-                          activeUser.role === 'dev') && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  '¿Eliminar esta publicación de portada en La Gaceta?'
-                                )
-                              ) {
-                                deletePost(leadStory.id);
-                              }
-                            }}
-                            aria-label="Eliminar publicación de portada"
-                            className="rounded-xl border border-red-500/30 p-2 text-red-500 hover:bg-red-500/10 transition"
-                            title="Eliminar publicación"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-
-                      <button
-                        type="button"
-                        onClick={() => setReadingPost(leadStory)}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-bold text-theme-primary transition hover:bg-theme-elevated"
-                      >
-                        <BookOpen className="h-3.5 w-3.5" />
-                        <span>Leer Crónica Completa</span>
-                      </button>
-
-                      {leadStory.actionUrl && (
-                        <Link
-                          href={leadStory.actionUrl}
-                          className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-4 py-2.5 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
-                        >
-                          <span>{leadStory.actionLabel || 'Conectar'}</span>
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </article>
-            )}
-
-            {/* B. SEGUNDA PLANA (COLUMNAS PARALELAS DE ARTÍCULOS) */}
-            {secondaryStories.length > 0 && (
-              <section aria-label="Segunda Plana" className="space-y-4">
-                <div className="flex items-center justify-between border-b border-theme pb-2">
-                  <h3 className="font-serif text-base font-bold text-theme-primary uppercase tracking-wide">
-                    Segunda Plana & Despachos de Sede
-                  </h3>
-                  <span className="text-xs text-theme-secondary">
-                    {secondaryStories.length} despachos confirmados
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  {secondaryStories.map((post) => {
-                    const campus = getCampusBySlug(post.campusSlug);
-                    const meta = CATEGORY_META[post.category];
-                    const canDelete =
-                      isAuthenticated &&
-                      (activeUser.username === post.authorUsername ||
-                        activeUser.role === 'dev');
-
-                    return (
-                      <article
-                        key={post.id}
-                        className="group flex flex-col justify-between overflow-hidden rounded-3xl border border-theme bg-theme-surface shadow-theme-card transition hover:border-[#FFB800]/50"
-                      >
-                        {post.imageUrl && (
-                          <div
-                            onClick={() => setReadingPost(post)}
-                            className="relative aspect-video w-full cursor-pointer overflow-hidden bg-black"
-                          >
-                            <img
-                              src={post.imageUrl}
-                              alt={post.title}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-90"
-                            />
-                            <div className="absolute top-2.5 left-2.5">
-                              <span className="rounded-full border border-white/20 bg-black/60 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-md">
-                                {meta.sectionName}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="flex-1 p-5 space-y-3">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#307FE2]">
-                              {campus.name}
-                            </span>
-                            <h4
-                              onClick={() => setReadingPost(post)}
-                              className="font-serif mt-1 text-base font-bold leading-snug text-theme-primary cursor-pointer hover:text-[#307FE2] transition"
-                            >
-                              {post.title}
-                            </h4>
-                          </div>
-
-                          <p
-                            onClick={() => setReadingPost(post)}
-                            className="line-clamp-3 text-xs leading-relaxed text-theme-secondary cursor-pointer hover:text-theme-primary transition"
-                          >
-                            {post.content}
-                          </p>
-                        </div>
-
-                        <div className="border-t border-theme p-4 bg-theme-subtle/50">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="text-[11px] truncate">
-                              <span className="text-theme-secondary">Por </span>
-                              <Link
-                                href={`/u/${post.authorUsername}`}
-                                className="font-bold text-theme-primary hover:underline"
-                              >
-                                {post.authorName.split(' ')[0]}
-                              </Link>
-                              <span className="text-theme-secondary">
-                                {' '}· {post.createdAt}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {canDelete && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (
-                                      confirm(
-                                        '¿Deseas eliminar este despacho de La Gaceta?'
-                                      )
-                                    ) {
-                                      deletePost(post.id);
-                                    }
-                                  }}
-                                  aria-label="Eliminar despacho"
-                                  className="rounded-lg p-1 text-red-500 hover:bg-red-500/10 transition"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-
-                              <button
-                                type="button"
-                                onClick={() => setReadingPost(post)}
-                                className="inline-flex items-center gap-1 text-xs font-bold text-[#FFB800] hover:underline"
-                              >
-                                <span>Leer</span>
-                                <ArrowRight className="h-3 w-3" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-          </main>
-
-          {/* COLUMNA LATERAL (4 COLS): CABLES TELEGRÁFICOS, CLASIFICADOS & ESTADO */}
-          <aside aria-label="Cables telegráficos y estado" className="space-y-6 lg:col-span-4">
-            {/* Bloque 1: Estado de la Red Nacional CITT */}
-            <div className="rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card">
-              <h3 className="font-serif text-sm font-bold text-theme-primary uppercase tracking-wider border-b border-theme pb-2.5">
-                Estado de la Red Nacional CITT
-              </h3>
-
-              <div className="mt-4 space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-theme-secondary">Sedes Interconectadas:</span>
-                  <span className="font-bold text-theme-primary">18 / 18 Sedes</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-theme-secondary">Convocatorias Abiertas:</span>
-                  <span className="font-bold text-[#FFB800]">{posts.length} Activas</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-theme-secondary">Canal de Consejeros:</span>
-                  <span className="font-bold text-[#00A499]">Enlace Directo</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-theme-secondary">Alianzas con Industria:</span>
-                  <span className="font-bold text-[#AC4FC6]">AWS & Partners</span>
-                </div>
+          {/* Gran Título Masthead con Logo Duoc UC Prominente */}
+          <div className="py-4 space-y-3">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+              {/* Logo Oficial Duoc UC en Alta Resolución */}
+              <div className="flex items-center gap-3">
+                <img
+                  src="/assets/Logo_DuocUC.svg.webp"
+                  alt="Logo Oficial Duoc UC"
+                  className="h-8 sm:h-10 w-auto object-contain brightness-100 dark:brightness-110 drop-shadow-sm"
+                />
               </div>
 
-              <div className="mt-4 rounded-xl border border-theme bg-theme-subtle p-3 text-[11px] text-theme-secondary">
-                <p className="font-medium">
-                  💡 <strong className="text-theme-primary">Nota de Redacción:</strong> Todas las postulaciones se registran automáticamente con tu cuenta institucional CITT Connect.
+              {/* Separador Broadsheet */}
+              <div className="hidden md:block h-10 w-px bg-theme" />
+
+              {/* Título Gaceta CITT */}
+              <div className="text-center md:text-left">
+                <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-theme-primary uppercase">
+                  EL DIARIO CITT
+                </h1>
+                <p className="font-serif italic text-xs sm:text-sm text-theme-secondary">
+                  La Gaceta Oficial de Innovación Aplicada & Transferencia Tecnológica
                 </p>
               </div>
             </div>
 
-            {/* Bloque 2: Cables Urgentes & Clasificados SOS */}
-            <div className="rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card">
-              <div className="flex items-center justify-between border-b border-theme pb-2.5">
-                <div className="flex items-center gap-1.5">
-                  <Radio className="h-3.5 w-3.5 text-[#E87722]" />
-                  <h3 className="font-serif text-sm font-bold text-theme-primary uppercase tracking-wider">
-                    Cables Urgentes SOS
-                  </h3>
-                </div>
-                <span className="text-[10px] font-bold text-[#E87722] bg-[#E87722]/10 px-2 py-0.5 rounded-full">
-                  EN VIVO
-                </span>
-              </div>
+            {/* Doble Línea Clásica de Prensa */}
+            <div className="border-t-2 border-b-4 border-double border-theme py-1.5">
+              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-theme-secondary">
+                Información Verificada · Neutralidad Institucional · Foco en Chile & Vanguardia Global
+              </p>
+            </div>
+          </div>
 
-              <div className="mt-4 divide-y divide-theme space-y-3">
-                {urgentCables.map((cable) => {
-                  const campus = getCampusBySlug(cable.campusSlug);
-                  return (
-                    <article key={cable.id} className="pt-3 first:pt-0 space-y-1.5">
-                      <div className="flex items-center justify-between text-[10px] text-theme-secondary">
-                        <span className="font-bold text-[#E87722] uppercase">
-                          Sede {campus.shortName}
-                        </span>
-                        <span>{cable.createdAt}</span>
-                      </div>
-
-                      <h4
-                        onClick={() => setReadingPost(cable)}
-                        className="text-xs font-bold text-theme-primary leading-snug cursor-pointer hover:text-[#E87722] transition"
-                      >
-                        {cable.title}
-                      </h4>
-                      <p
-                        onClick={() => setReadingPost(cable)}
-                        className="text-[11px] leading-relaxed text-theme-secondary line-clamp-2 cursor-pointer hover:text-theme-primary transition"
-                      >
-                        {cable.content}
-                      </p>
-
-                      <div className="flex items-center justify-between pt-1 text-[11px]">
-                        <span className="text-theme-secondary">
-                          Por{' '}
-                          <strong className="text-theme-primary">
-                            {cable.authorName.split(' ')[0]}
-                          </strong>
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {isAuthenticated &&
-                            (activeUser.username === cable.authorUsername ||
-                              activeUser.role === 'dev') && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (
-                                    confirm(
-                                      '¿Deseas eliminar este cable SOS de La Gaceta?'
-                                    )
-                                  ) {
-                                    deletePost(cable.id);
-                                  }
-                                }}
-                                aria-label="Eliminar cable"
-                                className="rounded p-1 text-red-500 hover:bg-red-500/10 transition"
-                                title="Eliminar cable"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            )}
-
-                          <button
-                            type="button"
-                            onClick={() => setReadingPost(cable)}
-                            className="font-bold text-[#FFB800] hover:underline"
-                          >
-                            Detalle
-                          </button>
-
-                          {cable.actionUrl && (
-                            <Link
-                              href={cable.actionUrl}
-                              className="inline-flex items-center gap-1 font-bold text-[#307FE2] hover:underline"
-                            >
-                              <span>Responder</span>
-                              <ArrowRight className="h-3 w-3" />
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
+          {/* Marquesina de Último Minuto (Ticker Infinito) */}
+          <div className="flex items-center gap-3 overflow-hidden rounded-2xl border border-theme bg-theme-subtle p-2 text-xs">
+            <div className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[#E87722] px-3 py-1 font-black text-white uppercase tracking-wider text-[11px]">
+              <Flame className="h-3.5 w-3.5 animate-bounce" />
+              <span>ÚLTIMO MINUTO</span>
             </div>
 
-            {/* Bloque 3: Reportajes de Fondo Destacados */}
-            <div className="rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card">
-              <h3 className="font-serif text-sm font-bold text-theme-primary uppercase tracking-wider border-b border-theme pb-2.5">
-                Suplemento de Investigación
-              </h3>
-
-              <div className="mt-4 space-y-4">
-                {CITT_BLOG_ARTICLES.slice(0, 2).map((art) => (
-                  <button
-                    key={art.id}
-                    type="button"
-                    onClick={() => setReadingArticle(art)}
-                    className="group block w-full text-left space-y-1.5 transition"
-                  >
-                    <span className="text-[10px] font-bold text-[#FFB800] uppercase">
-                      {art.readTime}
-                    </span>
-                    <h4 className="font-serif text-xs font-bold text-theme-primary group-hover:text-[#307FE2] leading-snug">
-                      {art.title}
-                    </h4>
-                    <p className="text-[11px] text-theme-secondary line-clamp-2">
-                      {art.excerpt}
-                    </p>
-                  </button>
+            <div className="relative w-full overflow-hidden whitespace-nowrap">
+              <div className="inline-block animate-marquee font-medium text-theme-primary">
+                {tickerHeadlines.map((headline, idx) => (
+                  <span key={idx} className="mx-4 inline-flex items-center gap-3">
+                    <span>{headline}</span>
+                    <span className="text-[#FFB800]">◆</span>
+                  </span>
                 ))}
               </div>
             </div>
-          </aside>
-        </div>
-      )}
+          </div>
+        </header>
 
-      {/* 4. SECCIÓN ESPECIAL: SUPLEMENTO DE CRÓNICAS & REPORTAJES A FONDO */}
-      {(activeDesk === 'reportajes' || activeDesk === 'todos') && (
-        <section aria-label="Suplemento de Crónicas y Reportajes a Fondo" className="space-y-6 border-t border-theme pt-8">
-          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-            <div>
-              <h2 className="font-serif text-2xl font-black text-theme-primary sm:text-3xl">
-                Suplemento Editorial: Crónicas & Reportajes a Fondo
-              </h2>
-              <p className="text-xs text-theme-secondary sm:text-sm">
-                Análisis en profundidad sobre la red nacional CITT, integración de escuelas y modelo de innovación Duoc UC
-              </p>
+        {/* ALERTA DE PUBLICACIÓN EXITOSA */}
+        {statusMessage && (
+          <div className="flex items-center gap-2 rounded-2xl border border-[#43B02A]/40 bg-[#43B02A]/10 p-3.5 text-xs font-bold text-[#43B02A]">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{statusMessage}</span>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* 2. HERO: CARRUSEL DESTACADO DE LAS 9 ESCUELAS DE DUOC UC   */}
+        {/* ========================================================= */}
+        <section
+          className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card space-y-6"
+          onMouseEnter={() => setIsHeroPaused(true)}
+          onMouseLeave={() => setIsHeroPaused(false)}
+        >
+          {/* Encabezado del Carrusel & Selector de las 9 Escuelas */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-theme pb-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#FFB800] animate-ping" />
+                <h2 className="text-xs font-black uppercase tracking-wider text-[#FFB800]">
+                  Vanguardia Multidisciplinaria · 9 Escuelas Oficiales
+                </h2>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-theme-secondary">
+                <span>
+                  Escuela {heroSchoolIndex + 1} de {DUOC_SCHOOLS.length}:{' '}
+                  <strong className="text-theme-primary">
+                    {currentHeroSchool.name}
+                  </strong>
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setHeroSchoolIndex(
+                        (prev) => (prev - 1 + DUOC_SCHOOLS.length) % DUOC_SCHOOLS.length
+                      )
+                    }
+                    aria-label="Escuela anterior"
+                    className="rounded-lg border border-theme p-1 hover:bg-theme-subtle"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setHeroSchoolIndex((prev) => (prev + 1) % DUOC_SCHOOLS.length)
+                    }
+                    aria-label="Escuela siguiente"
+                    className="rounded-lg border border-theme p-1 hover:bg-theme-subtle"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <span className="text-xs font-semibold text-theme-secondary">
-              {CITT_BLOG_ARTICLES.length} crónicas disponibles
-            </span>
+            {/* Píldoras de las 9 Escuelas */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+              {DUOC_SCHOOLS.map((school, index) => {
+                const isActive = index === heroSchoolIndex;
+                return (
+                  <button
+                    key={school.slug}
+                    type="button"
+                    onClick={() => setHeroSchoolIndex(index)}
+                    className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                      isActive
+                        ? 'bg-[#FFB800] text-[#1A1A1A] shadow-sm font-black'
+                        : 'border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary'
+                    }`}
+                  >
+                    <span>{school.shortName}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {CITT_BLOG_ARTICLES.map((article) => (
-              <article
-                key={article.id}
-                className="group flex flex-col justify-between overflow-hidden rounded-3xl border border-theme bg-theme-surface shadow-theme-card transition hover:border-[#FFB800]/50"
-              >
-                <div className="relative aspect-video w-full overflow-hidden bg-black">
+          {/* Gran Noticia Destacada de la Escuela Seleccionada */}
+          {currentHeroArticle && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              {/* Imagen con Caption Periodístico */}
+              <div className="lg:col-span-7 space-y-2">
+                <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-theme bg-theme-subtle group">
                   <img
-                    src={article.coverImageUrl}
-                    alt={article.title}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-90"
+                    src={currentHeroArticle.imageUrl}
+                    alt={currentHeroArticle.title}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
-                  <div className="absolute top-3 left-3">
-                    <span className="rounded-full bg-[#FFB800] px-3 py-1 text-xs font-black text-[#1A1A1A] shadow-md">
-                      REPORTAJE CITT
+                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                    <span className="rounded-full border border-black/30 bg-black/75 px-3 py-1 text-xs font-bold text-white backdrop-blur-md">
+                      {currentHeroArticle.regionLabel}
                     </span>
-                  </div>
-                  <div className="absolute bottom-3 right-3">
-                    <span className="rounded-full border border-white/20 bg-black/60 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md">
-                      {article.readTime}
+                    <span className="rounded-full bg-[#FFB800] px-2.5 py-1 text-xs font-black text-[#1A1A1A]">
+                      {currentHeroArticle.schoolName}
                     </span>
                   </div>
                 </div>
+                <div className="flex items-center justify-between text-[11px] text-theme-secondary px-1">
+                  <span>Fuente: {currentHeroArticle.sourceName}</span>
+                  <span>Lectura estimada: {currentHeroArticle.readingTime}</span>
+                </div>
+              </div>
 
-                <div className="flex-1 p-6 space-y-3">
-                  <h3 className="font-serif text-xl font-bold leading-snug text-theme-primary group-hover:text-[#307FE2] transition">
-                    {article.title}
+              {/* Contenido Editorial Washington Post */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="space-y-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#307FE2]">
+                    Reportaje Principal · Escuela de {currentHeroArticle.schoolName}
+                  </span>
+                  <h3
+                    onClick={() => setReadingArticle(currentHeroArticle)}
+                    className="font-serif text-2xl sm:text-3xl lg:text-4xl font-black leading-tight tracking-tight text-theme-primary hover:text-[#307FE2] cursor-pointer transition"
+                  >
+                    {currentHeroArticle.title}
                   </h3>
-                  <p className="text-xs font-semibold text-theme-secondary leading-relaxed">
-                    {article.subtitle}
-                  </p>
-                  <p className="text-xs text-theme-secondary leading-relaxed line-clamp-3">
-                    {article.excerpt}
+                  <p className="text-xs sm:text-sm font-bold text-theme-secondary leading-relaxed">
+                    {currentHeroArticle.subtitle}
                   </p>
                 </div>
 
-                <div className="border-t border-theme p-4 bg-theme-subtle/50 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={article.authorAvatarUrl}
-                      alt={article.authorName}
-                      className="h-7 w-7 rounded-full object-cover ring-1 ring-theme"
-                    />
-                    <div className="text-[11px]">
-                      <p className="font-bold text-theme-primary">
-                        {article.authorName}
+                <p className="text-xs text-theme-secondary/90 leading-relaxed line-clamp-4">
+                  {currentHeroArticle.content}
+                </p>
+
+                {/* Tags & Firma de Autor */}
+                <div className="border-t border-theme pt-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-theme-primary">
+                        Por {currentHeroArticle.author}
                       </p>
-                      <p className="text-theme-secondary">
-                        {article.publishedAt}
+                      <p className="text-[11px] text-theme-secondary">
+                        {currentHeroArticle.authorTitle}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setReadingArticle(currentHeroArticle)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-theme-primary px-4 py-2 text-xs font-bold text-theme-canvas transition hover:opacity-90"
+                    >
+                      <span>Leer Crónica</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1">
+                    {currentHeroArticle.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-md border border-theme bg-theme-subtle px-2 py-0.5 text-[10px] font-semibold text-theme-secondary"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ========================================================= */}
+        {/* 3. BARRA DE FILTROS & SECCIONES DE PRENSA                 */}
+        {/* ========================================================= */}
+        <section className="rounded-3xl border border-theme bg-theme-surface p-4 sm:p-5 shadow-theme-card space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            {/* Pestañas de Secciones */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveDesk('todas')}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                  activeDesk === 'todas'
+                    ? 'bg-theme-primary text-theme-canvas shadow-sm'
+                    : 'border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary'
+                }`}
+              >
+                Todas las Noticias
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveDesk('chile')}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                  activeDesk === 'chile'
+                    ? 'bg-[#107C41] text-white shadow-sm'
+                    : 'border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary'
+                }`}
+              >
+                🇨🇱 Solo Chile
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveDesk('internacional')}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                  activeDesk === 'internacional'
+                    ? 'bg-[#307FE2] text-white shadow-sm'
+                    : 'border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary'
+                }`}
+              >
+                🌎 Internacional
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveDesk('comunidad')}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                  activeDesk === 'comunidad'
+                    ? 'bg-[#AC4FC6] text-white shadow-sm'
+                    : 'border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary'
+                }`}
+              >
+                📢 Cables de Sede ({communityPosts.length})
+              </button>
+            </div>
+
+            {/* Buscador Rápido y Filtro de Sede */}
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <div className="relative w-full sm:w-64">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar titular o tecnología..."
+                  className="w-full rounded-xl border border-theme bg-theme-subtle px-3 py-1.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none pl-8"
+                />
+                <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-theme-secondary" />
+              </div>
+
+              <select
+                value={selectedCampus}
+                onChange={(e) => setSelectedCampus(e.target.value)}
+                className="w-full sm:w-auto rounded-xl border border-theme bg-theme-subtle px-3 py-1.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+              >
+                <option value="todas">Todas las Sedes (18)</option>
+                {CITT_CAMPUSES.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.shortName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================= */}
+        {/* 4. CUERPO DE PRENSA A 3 COLUMNAS (BROADSHEET WASHINGTON POST) */}
+        {/* ========================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* ------------------------------------------------------- */}
+          {/* COLUMNA 1 & 2: GRANDES CRÓNICAS Y REPORTAJES (8 COLS)   */}
+          {/* ------------------------------------------------------- */}
+          <div className="lg:col-span-8 space-y-6">
+            <div className="flex items-center justify-between border-b border-theme pb-2.5">
+              <h3 className="font-serif text-lg font-black tracking-tight text-theme-primary uppercase">
+                {activeDesk === 'chile'
+                  ? 'Crónicas Nacionales · Ecosistema Chileno'
+                  : activeDesk === 'internacional'
+                  ? 'Despachos Globales · Frontera Tecnológica'
+                  : activeDesk === 'comunidad'
+                  ? 'Cables de Sedes Duoc UC'
+                  : 'Primera Plana · Noticias de Innovación'}
+              </h3>
+              <span className="text-xs text-theme-secondary font-medium">
+                {filteredArticles.length} artículos disponibles
+              </span>
+            </div>
+
+            {/* Listado Principal de Noticias en Grid Editorial */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredArticles.map((article, idx) => (
+                <article
+                  key={article.id}
+                  onClick={() => setReadingArticle(article)}
+                  className={`group flex flex-col justify-between rounded-2xl border border-theme bg-theme-surface p-5 shadow-theme-card cursor-pointer transition hover:border-[#FFB800] hover:shadow-md ${
+                    idx === 0 ? 'md:col-span-2' : ''
+                  }`}
+                >
+                  <div className="space-y-3">
+                    {/* Imagen */}
+                    <div
+                      className={`relative overflow-hidden rounded-xl border border-theme bg-theme-subtle ${
+                        idx === 0 ? 'aspect-[21/9]' : 'aspect-[16/10]'
+                      }`}
+                    >
+                      <img
+                        src={article.imageUrl}
+                        alt={article.title}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                        <span className="rounded-full border border-black/30 bg-black/75 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-md">
+                          {article.regionLabel}
+                        </span>
+                        <span className="rounded-full bg-[#FFB800] px-2 py-0.5 text-[10px] font-black text-[#1A1A1A]">
+                          {article.schoolName}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Titular & Subtítulo */}
+                    <div className="space-y-1.5">
+                      <h4
+                        className={`font-serif font-black text-theme-primary group-hover:text-[#307FE2] transition leading-tight ${
+                          idx === 0 ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'
+                        }`}
+                      >
+                        {article.title}
+                      </h4>
+                      <p className="text-xs text-theme-secondary line-clamp-2 leading-relaxed">
+                        {article.subtitle}
                       </p>
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setReadingArticle(article)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#FFB800] px-3.5 py-1.5 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
-                  >
-                    <span>Leer Reportaje</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+                  {/* Pie de Noticia */}
+                  <div className="mt-4 flex items-center justify-between border-t border-theme pt-3 text-[11px] text-theme-secondary">
+                    <div>
+                      <span className="font-bold text-theme-primary">
+                        {article.author}
+                      </span>
+                      <span className="mx-1">·</span>
+                      <span>{article.readingTime}</span>
+                    </div>
 
-      {/* 5. MODAL DE LECTURA DE CRÓNICA COMPLETA */}
-      {readingArticle && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
-        >
-          <div className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 sm:p-10 shadow-2xl">
-            <button
-              type="button"
-              onClick={() => setReadingArticle(null)}
-              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary"
-            >
-              ✕
-            </button>
-
-            <span className="rounded-full bg-[#FFB800] px-3 py-1 text-xs font-black text-[#1A1A1A]">
-              CRÓNICA DE INVESTIGACIÓN CITT
-            </span>
-
-            <h2 className="font-serif mt-4 text-2xl font-black text-theme-primary sm:text-3xl lg:text-4xl leading-tight">
-              {readingArticle.title}
-            </h2>
-
-            <p className="mt-2 text-sm font-semibold text-theme-secondary sm:text-base leading-relaxed">
-              {readingArticle.subtitle}
-            </p>
-
-            <div className="mt-4 flex items-center gap-3 border-y border-theme py-3 text-xs text-theme-secondary">
-              <img
-                src={readingArticle.authorAvatarUrl}
-                alt={readingArticle.authorName}
-                className="h-8 w-8 rounded-full object-cover ring-2 ring-[#FFB800]"
-              />
-              <div>
-                <p className="font-bold text-theme-primary">
-                  Por {readingArticle.authorName}
-                </p>
-                <p className="text-[11px]">
-                  {readingArticle.publishedAt} · {getCampusBySlug(readingArticle.campusSlug).name} · {readingArticle.readTime}
-                </p>
-              </div>
-            </div>
-
-            <div className="relative mt-6 aspect-video w-full overflow-hidden rounded-2xl bg-black">
-              <img
-                src={readingArticle.coverImageUrl}
-                alt={readingArticle.title}
-                className="h-full w-full object-cover"
-              />
-            </div>
-
-            <div className="mt-6 space-y-4 text-sm leading-relaxed text-theme-primary/90 font-serif">
-              {readingArticle.contentParagraphs.map((par, i) => (
-                <p key={i}>{par}</p>
+                    <span className="font-bold text-[#307FE2] group-hover:underline">
+                      Leer más →
+                    </span>
+                  </div>
+                </article>
               ))}
             </div>
-
-            <div className="mt-8 border-t border-theme pt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setReadingArticle(null)}
-                className="rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
-              >
-                Cerrar Lectura
-              </button>
-            </div>
           </div>
-        </div>
-      )}
 
-      {/* 6. MODAL DE LECTURA DE NOTICIA / DESPACHO COMPLETO */}
-      {readingPost && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
-        >
-          <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-2xl">
-            <button
-              type="button"
-              onClick={() => setReadingPost(null)}
-              aria-label="Cerrar modal de lectura"
-              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-[#FFB800] px-3 py-1 text-xs font-black text-[#1A1A1A]">
-                {CATEGORY_META[readingPost.category].sectionName}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-theme bg-theme-subtle px-2.5 py-1 text-xs font-medium text-theme-secondary">
-                <MapPin className="h-3 w-3 text-[#307FE2]" />
-                <span>{getCampusBySlug(readingPost.campusSlug).name}</span>
-              </span>
-              {readingPost.readTime && (
-                <span className="inline-flex items-center gap-1 text-xs text-theme-secondary">
-                  <Clock className="h-3 w-3" />
-                  <span>{readingPost.readTime}</span>
-                </span>
-              )}
-            </div>
-
-            <h2 className="font-serif mt-4 text-2xl font-black text-theme-primary sm:text-3xl leading-tight">
-              {readingPost.title}
-            </h2>
-
-            {readingPost.subtitle && (
-              <p className="mt-2 text-sm font-semibold text-theme-secondary sm:text-base leading-relaxed">
-                {readingPost.subtitle}
-              </p>
-            )}
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-y border-theme py-3 text-xs text-theme-secondary">
+          {/* ------------------------------------------------------- */}
+          {/* COLUMNA 3: CABLES DE SEDE, OPINIÓN & TRIBUNA (4 COLS)   */}
+          {/* ------------------------------------------------------- */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Tarjeta de Identidad Editorial con Logo Duoc UC */}
+            <div className="rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card space-y-3">
               <div className="flex items-center gap-2.5">
-                <RoleBadge role={readingPost.authorRole} showTooltip={false} />
-                <div>
-                  <p className="font-bold text-theme-primary">
-                    Por{' '}
-                    <Link
-                      href={`/u/${readingPost.authorUsername}`}
-                      className="hover:underline"
-                    >
-                      {readingPost.authorName}
-                    </Link>
-                  </p>
-                  <p className="text-[11px]">
-                    {readingPost.authorOccupation} · {readingPost.createdAt}
-                  </p>
-                </div>
-              </div>
-
-              {isAuthenticated &&
-                (activeUser.username === readingPost.authorUsername ||
-                  activeUser.role === 'dev') && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (
-                        confirm(
-                          '¿Estás seguro de eliminar esta publicación de La Gaceta CITT?'
-                        )
-                      ) {
-                        deletePost(readingPost.id);
-                        setReadingPost(null);
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-500 transition hover:bg-red-500/20"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Eliminar Publicación</span>
-                  </button>
-                )}
-            </div>
-
-            {readingPost.imageUrl && (
-              <div className="relative mt-6 aspect-video w-full overflow-hidden rounded-2xl bg-black">
                 <img
-                  src={readingPost.imageUrl}
-                  alt={readingPost.title}
-                  className="h-full w-full object-cover"
+                  src="/assets/Logo_DuocUC.svg.webp"
+                  alt="Duoc UC"
+                  className="h-5 w-auto object-contain brightness-100 dark:brightness-110"
                 />
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#FFB800]">
+                  Gobernanza CITT
+                </span>
               </div>
-            )}
-
-            <div className="mt-6 space-y-3 text-sm leading-relaxed text-theme-primary/90 font-serif">
-              {readingPost.content.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="leading-relaxed">
-                  {paragraph}
-                </p>
-              ))}
+              <p className="text-xs text-theme-secondary leading-relaxed">
+                Diario tecnológico administrado por los centros de innovación y
+                transferencia tecnológica de las 18 sedes de Duoc UC. Información
+                académica, técnica y neutral orientada al desarrollo nacional.
+              </p>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-theme pt-4">
+            {/* Despachos / Cables de Sede en Vivo (Comunidad) */}
+            <div className="rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card space-y-4">
+              <div className="flex items-center justify-between border-b border-theme pb-3">
+                <div className="flex items-center gap-2">
+                  <Radio className="h-4 w-4 text-[#E87722] animate-pulse" />
+                  <h4 className="font-serif text-sm font-black text-theme-primary uppercase">
+                    Cables de Sede en Vivo
+                  </h4>
+                </div>
+                <span className="text-[11px] font-bold text-theme-secondary">
+                  {communityPosts.length} despachos
+                </span>
+              </div>
+
+              <div className="space-y-4 divide-y divide-theme">
+                {communityPosts.slice(0, 5).map((post) => {
+                  const campus = getCampusBySlug(post.campusSlug);
+                  return (
+                    <div
+                      key={post.id}
+                      onClick={() => setReadingCommunityPost(post)}
+                      className="pt-3 first:pt-0 space-y-1.5 cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between gap-1 text-[10px]">
+                        <span className="font-bold text-[#E87722]">
+                          Sede {campus.shortName}
+                        </span>
+                        <span className="text-theme-secondary">
+                          {new Date(post.createdAt).toLocaleDateString('es-CL')}
+                        </span>
+                      </div>
+                      <h5 className="font-serif text-xs font-bold text-theme-primary group-hover:text-[#307FE2] transition leading-snug">
+                        {post.title}
+                      </h5>
+                      <p className="text-[11px] text-theme-secondary line-clamp-2 leading-relaxed">
+                        {post.content}
+                      </p>
+                      <div className="flex items-center gap-2 pt-1 text-[10px] text-theme-secondary">
+                        <span className="font-semibold text-theme-primary">
+                          {post.authorName}
+                        </span>
+                        <span>·</span>
+                        <RoleBadge role={post.authorRole} showTooltip={false} size="sm" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
               <button
                 type="button"
-                onClick={() => setReadingPost(null)}
-                className="rounded-xl border border-theme px-4 py-2 text-xs font-semibold text-theme-secondary hover:bg-theme-subtle hover:text-theme-primary"
+                onClick={() => setComposeModalOpen(true)}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-theme bg-theme-subtle py-2 text-xs font-bold text-theme-primary transition hover:border-[#FFB800]"
               >
-                Cerrar Lectura
+                <Plus className="h-3.5 w-3.5" />
+                <span>Enviar Despacho desde mi Sede</span>
               </button>
+            </div>
 
-              {readingPost.actionUrl && (
-                <Link
-                  href={readingPost.actionUrl}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
-                >
-                  <span>{readingPost.actionLabel || 'Conectar o Postular'}</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              )}
+            {/* Tribuna de Opinión CITT */}
+            <div className="rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card space-y-4">
+              <div className="flex items-center gap-2 border-b border-theme pb-3">
+                <PenTool className="h-4 w-4 text-[#307FE2]" />
+                <h4 className="font-serif text-sm font-black text-theme-primary uppercase">
+                  Tribuna & Opinión Docente
+                </h4>
+              </div>
+
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 space-y-2">
+                  <p className="font-serif italic text-xs font-semibold text-theme-primary leading-relaxed">
+                    «La interoperabilidad de la computación cuántica y la IA exigirá técnicos capaces de auditar modelos locales en menos de cinco años.»
+                  </p>
+                  <div className="text-[11px] text-theme-secondary">
+                    <strong className="text-theme-primary">Prof. Carlos Vega R.</strong>
+                    <p>Coordinador CITT Sede Concepción</p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 space-y-2">
+                  <p className="font-serif italic text-xs font-semibold text-theme-primary leading-relaxed">
+                    «El ecodiseño chileno no es una opción de marketing; es la única vía para exportar productos con trazabilidad comprobable.»
+                  </p>
+                  <div className="text-[11px] text-theme-secondary">
+                    <strong className="text-theme-primary">Valentina Soto Miranda</strong>
+                    <p>Consejera de Carrera · Escuela de Diseño</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* 5. MODAL DE LECTURA DE CRÓNICA COMPLETA (WASHINGTON POST) */}
+      {/* ========================================================= */}
+      {readingArticle && (
+        <Dialog.Root open={!!readingArticle} onOpenChange={(open) => !open && setReadingArticle(null)}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" />
+            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 sm:p-10 shadow-2xl">
+              <div className="space-y-6">
+                {/* Cabecera del Reportaje */}
+                <div className="flex items-center justify-between border-b border-theme pb-4">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src="/assets/Logo_DuocUC.svg.webp"
+                      alt="Duoc UC"
+                      className="h-5 w-auto object-contain brightness-100 dark:brightness-110"
+                    />
+                    <span className="rounded-full bg-[#FFB800] px-2.5 py-0.5 text-xs font-black text-[#1A1A1A]">
+                      {readingArticle.schoolName}
+                    </span>
+                    <span className="text-xs font-bold text-theme-secondary">
+                      {readingArticle.regionLabel}
+                    </span>
+                  </div>
+
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="rounded-xl border border-theme p-1.5 text-theme-secondary hover:text-theme-primary"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </Dialog.Close>
+                </div>
+
+                {/* Titular & Subtítulo Editorial */}
+                <div className="space-y-3">
+                  <h2 className="font-serif text-2xl sm:text-4xl font-black leading-tight tracking-tight text-theme-primary">
+                    {readingArticle.title}
+                  </h2>
+                  <p className="font-serif text-sm sm:text-base font-bold text-theme-secondary leading-relaxed">
+                    {readingArticle.subtitle}
+                  </p>
+                  <div className="flex items-center gap-3 text-xs text-theme-secondary border-t border-b border-theme py-2.5">
+                    <span>Por <strong className="text-theme-primary">{readingArticle.author}</strong> ({readingArticle.authorTitle})</span>
+                    <span>·</span>
+                    <span>Fuente: {readingArticle.sourceName}</span>
+                    <span>·</span>
+                    <span>{readingArticle.readingTime}</span>
+                  </div>
+                </div>
+
+                {/* Imagen Principal */}
+                <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-theme bg-theme-subtle">
+                  <img
+                    src={readingArticle.imageUrl}
+                    alt={readingArticle.title}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                {/* Cuerpo del Reportaje (Con Formato Periodístico) */}
+                <div className="space-y-4 text-xs sm:text-sm text-theme-primary/90 leading-relaxed font-serif">
+                  {readingArticle.content.split('\n\n').map((paragraph, pIdx) => (
+                    <p key={pIdx} className={pIdx === 0 ? 'first-letter:text-4xl first-letter:font-black first-letter:float-left first-letter:mr-2 first-letter:text-[#FFB800]' : ''}>
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+
+                {/* Enlace a Fuente Original si existe */}
+                {readingArticle.sourceUrl && (
+                  <div className="pt-2">
+                    <a
+                      href={readingArticle.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#307FE2] hover:underline"
+                    >
+                      <span>Ver fuente original en {readingArticle.sourceName}</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                )}
+
+                {/* Pie del Modal */}
+                <div className="flex items-center justify-between border-t border-theme pt-4">
+                  <div className="flex flex-wrap gap-1">
+                    {readingArticle.tags.map((t) => (
+                      <span key={t} className="rounded-md border border-theme bg-theme-subtle px-2 py-0.5 text-[10px] font-semibold text-theme-secondary">
+                        #{t}
+                      </span>
+                    ))}
+                  </div>
+
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="rounded-xl bg-theme-primary px-4 py-2 text-xs font-bold text-theme-canvas"
+                    >
+                      Cerrar Lectura
+                    </button>
+                  </Dialog.Close>
+                </div>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
+
+      {/* ========================================================= */}
+      {/* 6. MODAL DE LECTURA DE CABLE DE COMUNIDAD                 */}
+      {/* ========================================================= */}
+      {readingCommunityPost && (
+        <Dialog.Root open={!!readingCommunityPost} onOpenChange={(open) => !open && setReadingCommunityPost(null)}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" />
+            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[85vh] w-full max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-2xl">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-theme pb-3">
+                  <div className="flex items-center gap-2">
+                    <Radio className="h-4 w-4 text-[#E87722]" />
+                    <span className="text-xs font-black uppercase text-[#E87722]">
+                      Despacho Sede {getCampusBySlug(readingCommunityPost.campusSlug).shortName}
+                    </span>
+                  </div>
+                  <Dialog.Close asChild>
+                    <button type="button" className="text-theme-secondary hover:text-theme-primary">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </Dialog.Close>
+                </div>
+
+                <h3 className="font-serif text-xl sm:text-2xl font-black text-theme-primary">
+                  {readingCommunityPost.title}
+                </h3>
+
+                {readingCommunityPost.imageUrl && (
+                  <div className="aspect-[16/9] overflow-hidden rounded-xl border border-theme">
+                    <img
+                      src={readingCommunityPost.imageUrl}
+                      alt={readingCommunityPost.title}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                )}
+
+                <p className="text-xs sm:text-sm text-theme-secondary leading-relaxed whitespace-pre-line">
+                  {readingCommunityPost.content}
+                </p>
+
+                <div className="flex items-center justify-between border-t border-theme pt-3 text-xs text-theme-secondary">
+                  <span className="font-bold text-theme-primary">
+                    Despachado por @{readingCommunityPost.authorUsername}
+                  </span>
+                  <RoleBadge role={readingCommunityPost.authorRole} showTooltip={false} size="sm" />
+                </div>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
+
+      {/* ========================================================= */}
+      {/* 7. MODAL: REDACTAR CABLE / NOTICIA DE SEDE                 */}
+      {/* ========================================================= */}
+      {composeModalOpen && (
+        <Dialog.Root open={composeModalOpen} onOpenChange={setComposeModalOpen}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" />
+            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-2xl">
+              <form onSubmit={handleComposeSubmit} className="space-y-4">
+                <div className="flex items-center justify-between border-b border-theme pb-3">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src="/assets/Logo_DuocUC.svg.webp"
+                      alt="Duoc UC"
+                      className="h-5 w-auto object-contain brightness-100 dark:brightness-110"
+                    />
+                    <h3 className="text-sm font-black text-theme-primary">
+                      Redactar Despacho / Cable de Sede
+                    </h3>
+                  </div>
+                  <Dialog.Close asChild>
+                    <button type="button" className="text-theme-secondary hover:text-theme-primary">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </Dialog.Close>
+                </div>
+
+                {!isAuthenticated && (
+                  <div className="rounded-xl border border-[#FFB800]/40 bg-[#FFB800]/10 p-3 text-xs text-[#FFB800]">
+                    💡 Publicarás como <strong>{activeUser.fullName}</strong>. Para firmar con tu credencial verificada,{' '}
+                    <Link href="/acceso" className="font-bold underline">
+                      inicia sesión aquí
+                    </Link>.
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-theme-primary">
+                    Titular del Despacho *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={postTitle}
+                    onChange={(e) => setPostTitle(e.target.value)}
+                    placeholder="Ej. Sede San Joaquín inaugura banco de pruebas robóticas"
+                    className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-theme-primary">
+                    Bajada / Resumen Breve
+                  </label>
+                  <input
+                    type="text"
+                    value={postSubtitle}
+                    onChange={(e) => setPostSubtitle(e.target.value)}
+                    placeholder="Ej. Iniciativa conjunta entre Informática y Diseño para estudiantes de jornada diurna y vespertina"
+                    className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-theme-primary">
+                      Sede Emisora *
+                    </label>
+                    <select
+                      value={postCampus}
+                      onChange={(e) => setPostCampus(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    >
+                      {CITT_CAMPUSES.map((c) => (
+                        <option key={c.slug} value={c.slug}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-theme-primary">
+                      Categoría *
+                    </label>
+                    <select
+                      value={postCategory}
+                      onChange={(e) =>
+                        setPostCategory(e.target.value as CittFeedPost['category'])
+                      }
+                      className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                    >
+                      <option value="noticia_citt">Noticia & Avance de Proyecto</option>
+                      <option value="evento_nacional">Convocatoria o Hackathon</option>
+                      <option value="oportunidad_partner">Oportunidad de Práctica / Mentoría</option>
+                      <option value="pedir_ayuda">Cable Urgente / SOS Técnico</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-theme-primary">
+                    Cuerpo del Despacho (Crónica o Hito) *
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={postContent}
+                    onChange={(e) => setPostContent(e.target.value)}
+                    placeholder="Detalla el acontecimiento tecnológico, los alumnos involucrados y cómo contactar al equipo..."
+                    className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-theme-primary">
+                    URL de Fotografía (Opcional)
+                  </label>
+                  <input
+                    type="url"
+                    value={postImageUrl}
+                    onChange={(e) => setPostImageUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-theme pt-3">
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="rounded-xl border border-theme px-4 py-2 text-xs font-bold text-theme-secondary hover:text-theme-primary"
+                    >
+                      Cancelar
+                    </button>
+                  </Dialog.Close>
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-[#FFB800] px-4 py-2 text-xs font-bold text-[#1A1A1A] hover:bg-[#ffc633]"
+                  >
+                    Emitir Despacho a la Gaceta
+                  </button>
+                </div>
+              </form>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       )}
     </div>
   );

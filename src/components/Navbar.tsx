@@ -112,13 +112,15 @@ export function Navbar() {
                 className="h-8 w-8 shrink-0 object-contain sm:h-9 sm:w-9"
               />
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <span className="whitespace-nowrap text-base font-black tracking-tight text-theme-primary">
                     CITT Connect
                   </span>
-                  <span className="whitespace-nowrap rounded-full border border-[#1A1A1A]/20 bg-[#FFB800] px-2 py-0.5 text-xs font-bold text-[#1A1A1A]">
-                    Duoc UC
-                  </span>
+                  <img
+                    src="/assets/Logo_DuocUC.svg.webp"
+                    alt="Logo Oficial Duoc UC"
+                    className="h-4 w-auto object-contain hidden sm:inline-block brightness-100 dark:brightness-110"
+                  />
                 </div>
                 <p className="whitespace-nowrap text-xs font-medium text-theme-secondary">
                   18 Sedes · {connectedMemberIds.length} vínculos
