@@ -73,7 +73,7 @@ export default function MyProfileEditorPage() {
             href="/acceso?redirect=/mi-perfil"
             className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
           >
-            <span>Iniciar Sesión / Acceso Rápido</span>
+            <span>Iniciar Sesión con Duoc UC</span>
             <ArrowUpRight className="h-4 w-4" />
           </Link>
           <Link

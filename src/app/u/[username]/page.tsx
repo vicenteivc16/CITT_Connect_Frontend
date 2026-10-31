@@ -327,7 +327,13 @@ export default function PublicMemberProfilePage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => sendConnectionRequest(member.id)}
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        router.push(`/acceso?redirect=/u/${member.username}`);
+                        return;
+                      }
+                      sendConnectionRequest(member.id);
+                    }}
                     className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633] sm:text-sm"
                   >
                     <UserPlus className="h-4 w-4" />
@@ -899,7 +905,13 @@ export default function PublicMemberProfilePage() {
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => toggleConnection(peer.id)}
+                          onClick={() => {
+                            if (!isAuthenticated) {
+                              router.push(`/acceso?redirect=/u/${member.username}`);
+                              return;
+                            }
+                            toggleConnection(peer.id);
+                          }}
                           className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                             peerConnected
                               ? 'bg-theme-inverse text-theme-text-inverse'

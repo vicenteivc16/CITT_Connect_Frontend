@@ -320,77 +320,111 @@ export function Navbar() {
                     <DropdownMenu.Content
                       align="end"
                       sideOffset={8}
-                      className="z-50 w-80 rounded-2xl border border-theme bg-theme-surface p-2.5 text-xs text-theme-primary shadow-theme-card"
+                      className="z-50 w-80 rounded-2xl border border-theme bg-theme-surface p-3 text-xs text-theme-primary shadow-theme-card"
                     >
-                      <div className="border-b border-theme px-3 py-2">
-                        <p className="font-bold text-theme-primary">
-                          Simulador de Sesión (6 Roles CITT)
-                        </p>
-                        <p className="mt-0.5 text-xs text-theme-secondary">
-                          Alterna entre perfiles para probar cada rol:
-                        </p>
+                      {/* Cabecera Institucional del Usuario Activo */}
+                      <div className="border-b border-theme pb-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={activeUser.avatarUrl || '/assets/citt-logo.webp'}
+                            alt={activeUser.fullName}
+                            className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-[#FFB800]"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-black text-theme-primary">
+                              {activeUser.fullName}
+                            </p>
+                            <p className="truncate text-[11px] text-theme-secondary">
+                              {activeUser.email}
+                            </p>
+                            <div className="mt-1 flex items-center gap-1.5">
+                              <RoleBadge role={activeUser.role} showTooltip={false} size="sm" />
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="mt-1.5 max-h-72 space-y-1 overflow-y-auto">
-                        {profiles.map((member) => {
-                          const isSelected = member.username === activeUser.username;
-                          return (
-                            <DropdownMenu.Item
-                              key={member.id}
-                              onSelect={() => setActiveUserByUsername(member.username)}
-                              className={`flex cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 outline-none transition ${
-                                isSelected
-                                  ? 'bg-theme-subtle font-bold text-theme-primary'
-                                  : 'text-theme-primary hover:bg-theme-subtle/70'
-                              }`}
-                            >
-                              <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                                <img
-                                  src={member.avatarUrl || '/assets/citt-logo.webp'}
-                                  alt={member.fullName}
-                                  className="h-7 w-7 shrink-0 rounded-full object-cover"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate font-bold">
-                                    {member.fullName}
-                                  </p>
-                                  <p className="truncate text-xs text-theme-secondary">
-                                    {member.careerTitle}
-                                  </p>
-                                </div>
-                              </div>
-                              <RoleBadge role={member.role} showTooltip={false} />
-                            </DropdownMenu.Item>
-                          );
-                        })}
-                      </div>
-
-                      <DropdownMenu.Separator className="my-2 h-px bg-theme-subtle" />
-
-                      <div className="space-y-1.5">
+                      {/* Enlaces Rápidos de Gestión */}
+                      <div className="py-2 space-y-1">
                         <DropdownMenu.Item asChild>
                           <Link
                             href="/mi-perfil"
-                            className="flex w-full cursor-pointer items-center justify-center rounded-xl bg-[#FFB800] px-3 py-2 font-bold text-[#1A1A1A] outline-none transition hover:bg-[#ffc633]"
+                            className="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-theme-primary transition hover:bg-theme-subtle"
                           >
-                            Editar mi credencial y generar QR
+                            <span>Mi Perfil & Credencial NFC</span>
+                            <span className="text-[11px] text-[#FFB800] font-black">→</span>
                           </Link>
                         </DropdownMenu.Item>
 
                         <DropdownMenu.Item asChild>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              logoutMember();
-                              router.push('/acceso');
-                            }}
-                            className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-500 outline-none transition hover:bg-red-500 hover:text-white"
+                          <Link
+                            href={`/u/${activeUser.username}`}
+                            className="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-theme-primary transition hover:bg-theme-subtle"
                           >
-                            <LogOut className="h-3.5 w-3.5" />
-                            <span>Cerrar Sesión</span>
-                          </button>
+                            <span>Ver mi Perfil Público</span>
+                            <span className="text-[11px] text-[#307FE2] font-black">↗</span>
+                          </Link>
                         </DropdownMenu.Item>
                       </div>
+
+                      {/* Simulador Rápido de Roles (Herramienta Institucional CITT) */}
+                      <div className="border-t border-theme pt-2">
+                        <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-theme-secondary">
+                          Alternar Rol de Usuario
+                        </p>
+                        <div className="mt-1.5 max-h-48 space-y-1 overflow-y-auto pr-1">
+                          {profiles.map((member) => {
+                            const isSelected = member.username === activeUser.username;
+                            return (
+                              <DropdownMenu.Item
+                                key={member.id}
+                                onSelect={() => setActiveUserByUsername(member.username)}
+                                className={`flex cursor-pointer items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 outline-none transition ${
+                                  isSelected
+                                    ? 'bg-theme-subtle font-bold text-theme-primary'
+                                    : 'text-theme-primary hover:bg-theme-subtle/70'
+                                }`}
+                              >
+                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                  <img
+                                    src={member.avatarUrl || '/assets/citt-logo.webp'}
+                                    alt={member.fullName}
+                                    className="h-6 w-6 shrink-0 rounded-full object-cover"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-[11px] font-bold">
+                                      {member.fullName.split(' ')[0]}
+                                    </p>
+                                    <p className="truncate text-[10px] text-theme-secondary">
+                                      {ROLE_CONFIG[member.role].shortLabel}
+                                    </p>
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <span className="text-[#FFB800] font-black text-xs">●</span>
+                                )}
+                              </DropdownMenu.Item>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <DropdownMenu.Separator className="my-2 h-px bg-theme" />
+
+                      {/* Botón de Cerrar Sesión */}
+                      <DropdownMenu.Item asChild>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            logoutMember();
+                            router.push('/acceso');
+                          }}
+                          className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-500 outline-none transition hover:bg-red-500 hover:text-white"
+                        >
+                          <LogOut className="h-3.5 w-3.5" />
+                          <span>Cerrar Sesión Institucional</span>
+                        </button>
+                      </DropdownMenu.Item>
                     </DropdownMenu.Content>
                   </DropdownMenu.Portal>
                 </DropdownMenu.Root>
