@@ -11,6 +11,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { useCittNetwork } from '@/context/CittNetworkContext';
+import { ActivitiesHero } from '@/components/actividades/ActivitiesHero';
 import { ActivityCard } from '@/components/actividades/ActivityCard';
 import { ActivityFiltersBar } from '@/components/actividades/ActivityFiltersBar';
 import { ActivityDetailModal } from '@/components/actividades/ActivityDetailModal';
@@ -97,65 +98,14 @@ export default function ActividadesPage() {
 
   return (
     <div className="space-y-8 pb-16">
-      {/* 1. Masthead / Banner Editorial Institucional */}
-      <section className="relative overflow-hidden rounded-3xl border border-theme bg-theme-surface p-6 sm:p-10 shadow-theme-card">
-        <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#FFB800]/40 bg-[#FFB800]/10 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-[#FFB800]">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Academia & Formación Continua Duoc UC</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-theme-primary">
-            Actividades & Talleres CITT
-          </h1>
-
-          <p className="text-sm sm:text-base leading-relaxed text-theme-secondary">
-            Participa en workshops prácticos, bootcamps de robótica, ciberseguridad e inteligencia artificial organizados por los Líderes CITT de cada sede. Inscríbete con tu credencial digital, accede a material de estudio descargable y acredita <strong>Horas CITT oficiales</strong>.
-          </p>
-
-          {/* Métricas destacadas */}
-          <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-2xl border border-theme bg-theme-subtle p-3">
-              <span className="text-[10px] font-bold uppercase text-theme-secondary block">
-                Talleres Activos
-              </span>
-              <span className="text-xl font-black text-theme-primary">
-                {totalOpenWorkshops}
-              </span>
-            </div>
-
-            <div className="rounded-2xl border border-theme bg-theme-subtle p-3">
-              <span className="text-[10px] font-bold uppercase text-theme-secondary block">
-                Cupos Disponibles
-              </span>
-              <span className="text-xl font-black text-[#43B02A]">
-                {totalAvailableSeats}
-              </span>
-            </div>
-
-            <div className="rounded-2xl border border-theme bg-theme-subtle p-3">
-              <span className="text-[10px] font-bold uppercase text-theme-secondary block">
-                Materiales de Estudio
-              </span>
-              <span className="text-xl font-black text-[#307FE2]">
-                {totalStudyMaterials} archivos
-              </span>
-            </div>
-
-            <div className="rounded-2xl border border-theme bg-theme-subtle p-3">
-              <span className="text-[10px] font-bold uppercase text-theme-secondary block">
-                Acreditación
-              </span>
-              <span className="text-xl font-black text-[#FFB800]">
-                100% Horas CITT
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Efecto de fondo sutil */}
-        <div className="absolute -right-20 -bottom-20 h-72 w-72 rounded-full bg-[#FFB800]/10 blur-3xl pointer-events-none" />
-      </section>
+      {/* 1. Hero Estético y de Comunidad CITT */}
+      <ActivitiesHero
+        totalWorkshops={totalOpenWorkshops}
+        availableSeats={totalAvailableSeats}
+        totalStudyMaterials={totalStudyMaterials}
+        onOpenCreate={() => setIsCreateOpen(true)}
+        isPrivileged={isPrivileged}
+      />
 
       {/* 2. Barra de Filtros y Búsqueda */}
       <ActivityFiltersBar
