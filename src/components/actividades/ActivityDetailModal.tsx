@@ -29,13 +29,15 @@ import { useCittNetwork } from '@/context/CittNetworkContext';
 interface ActivityDetailModalProps {
   activity: CittActivity | null;
   onClose: () => void;
+  onOpenEnrollment?: (activity: CittActivity) => void;
 }
 
 export function ActivityDetailModal({
   activity,
   onClose,
+  onOpenEnrollment,
 }: ActivityDetailModalProps) {
-  const { activeUser, isAuthenticated, enrollInActivity, unenrollFromActivity } =
+  const { activeUser, isAuthenticated, unenrollFromActivity } =
     useCittNetwork();
 
   if (!activity) return null;
@@ -56,11 +58,13 @@ export function ActivityDetailModal({
   const percentage = Math.min(100, Math.round((enrolledCount / activity.totalSeats) * 100));
 
   const handleEnrollClick = () => {
-    if (!isAuthenticated) return;
     if (isEnrolled || isWaitingList) {
       unenrollFromActivity(activity.id);
-    } else {
-      enrollInActivity(activity.id);
+      return;
+    }
+
+    if (onOpenEnrollment) {
+      onOpenEnrollment(activity);
     }
   };
 

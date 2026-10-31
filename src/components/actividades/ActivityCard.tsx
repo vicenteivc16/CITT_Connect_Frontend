@@ -24,15 +24,15 @@ import { useCittNetwork } from '@/context/CittNetworkContext';
 interface ActivityCardProps {
   activity: CittActivity;
   onSelect: (activity: CittActivity) => void;
-  onEnrollToggle?: (activityId: string) => void;
+  onEnrollRequest?: (activity: CittActivity) => void;
 }
 
 export function ActivityCard({
   activity,
   onSelect,
-  onEnrollToggle,
+  onEnrollRequest,
 }: ActivityCardProps) {
-  const { activeUser, isAuthenticated, enrollInActivity, unenrollFromActivity } =
+  const { activeUser, isAuthenticated, unenrollFromActivity } =
     useCittNetwork();
 
   const school = DUOC_SCHOOLS.find((s) => s.slug === activity.schoolSlug);
@@ -52,15 +52,15 @@ export function ActivityCard({
 
   const handleQuickEnroll = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAuthenticated) {
-      onSelect(activity);
+    if (isEnrolled || isWaitingList) {
+      unenrollFromActivity(activity.id);
       return;
     }
 
-    if (isEnrolled || isWaitingList) {
-      unenrollFromActivity(activity.id);
+    if (onEnrollRequest) {
+      onEnrollRequest(activity);
     } else {
-      enrollInActivity(activity.id);
+      onSelect(activity);
     }
   };
 

@@ -19,6 +19,13 @@ import {
   INITIAL_PROJECTS,
 } from '@/data/citt-catalog';
 import { CITT_THEMES, CittThemeTokens, ThemeMode } from '@/styles/themes';
+import {
+  getSupabaseActivities,
+  enrollInSupabaseActivity,
+  unenrollFromSupabaseActivity,
+  createSupabaseActivity,
+} from '@/lib/supabase/activities';
+import { getSupabaseProfiles } from '@/lib/supabase/profiles';
 
 interface CittNetworkContextValue {
   profiles: CittMemberProfile[];
@@ -248,6 +255,35 @@ export function CittNetworkProvider({
     } catch {
       // Fallback to initial seed data if localStorage is unavailable
     }
+
+    // Sincronización en vivo con Supabase en la nube
+    getSupabaseActivities()
+      .then((supabaseActs) => {
+        if (supabaseActs && supabaseActs.length > 0) {
+          setActivities(supabaseActs);
+          try {
+            localStorage.setItem(
+              STORAGE_KEYS.ACTIVITIES,
+              JSON.stringify(supabaseActs)
+            );
+          } catch {}
+        }
+      })
+      .catch((err) => console.warn('Supabase activities sync fallback:', err));
+
+    getSupabaseProfiles()
+      .then((supabaseProfiles) => {
+        if (supabaseProfiles && supabaseProfiles.length > 0) {
+          setProfiles(supabaseProfiles);
+          try {
+            localStorage.setItem(
+              STORAGE_KEYS.PROFILES,
+              JSON.stringify(supabaseProfiles)
+            );
+          } catch {}
+        }
+      })
+      .catch((err) => console.warn('Supabase profiles sync fallback:', err));
   }, []);
 
   const themeTokens = CITT_THEMES[theme];
@@ -1099,6 +1135,11 @@ export function CittNetworkProvider({
       // ignore
     }
 
+    // Persistir en base de datos Supabase
+    enrollInSupabaseActivity(activityId, activeUser, isFull).catch((err) =>
+      console.warn('Supabase enrollment sync:', err)
+    );
+
     if (isFull) {
       return {
         success: true,
@@ -1159,6 +1200,11 @@ export function CittNetworkProvider({
       // ignore
     }
 
+    // Liberar cupo en Supabase
+    unenrollFromSupabaseActivity(activityId, activeUsername).catch((err) =>
+      console.warn('Supabase unenrollment sync:', err)
+    );
+
     return {
       success: true,
       message: 'Tu inscripción ha sido cancelada y el cupo fue liberado.',
@@ -1186,6 +1232,19 @@ export function CittNetworkProvider({
     } catch {
       // ignore
     }
+
+    // Persistir en Supabase en la nube
+    createSupabaseActivity(activityData)
+      .then((res) => {
+        if (res.success && res.data?.id) {
+          setActivities((prev) =>
+            prev.map((a) =>
+              a.slug === newActivity.slug ? { ...a, id: res.data.id } : a
+            )
+          );
+        }
+      })
+      .catch((err) => console.warn('Supabase activity creation:', err));
   };
 
   return (

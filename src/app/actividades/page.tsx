@@ -15,6 +15,7 @@ import { ActivityCard } from '@/components/actividades/ActivityCard';
 import { ActivityFiltersBar } from '@/components/actividades/ActivityFiltersBar';
 import { ActivityDetailModal } from '@/components/actividades/ActivityDetailModal';
 import { CreateActivityModal } from '@/components/actividades/CreateActivityModal';
+import { EnrollmentModal } from '@/components/actividades/EnrollmentModal';
 import { CittActivity, DuocSchoolSlug, ActivityModality } from '@/types/citt';
 
 export default function ActividadesPage() {
@@ -28,6 +29,7 @@ export default function ActividadesPage() {
 
   // Modales
   const [selectedActivity, setSelectedActivity] = useState<CittActivity | null>(null);
+  const [enrollmentTarget, setEnrollmentTarget] = useState<CittActivity | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const isPrivileged = ['dev', 'personal_duoc', 'lider_citt'].includes(activeUser.role);
@@ -203,6 +205,7 @@ export default function ActividadesPage() {
               key={activity.id}
               activity={activity}
               onSelect={(act) => setSelectedActivity(act)}
+              onEnrollRequest={(act) => setEnrollmentTarget(act)}
             />
           ))}
         </div>
@@ -213,8 +216,18 @@ export default function ActividadesPage() {
         <ActivityDetailModal
           activity={selectedActivity}
           onClose={() => setSelectedActivity(null)}
+          onOpenEnrollment={(act) => {
+            setSelectedActivity(null);
+            setEnrollmentTarget(act);
+          }}
         />
       )}
+
+      <EnrollmentModal
+        activity={enrollmentTarget}
+        isOpen={Boolean(enrollmentTarget)}
+        onClose={() => setEnrollmentTarget(null)}
+      />
 
       <CreateActivityModal
         isOpen={isCreateOpen}
