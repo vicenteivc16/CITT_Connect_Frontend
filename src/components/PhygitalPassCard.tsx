@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Check,
+  Clock,
   Copy,
   Download,
   ExternalLink,
@@ -18,9 +19,12 @@ import {
   QrCode,
   RotateCcw,
   Share2,
+  UserCheck,
   UserPlus,
   Wifi,
+  X,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { CittMemberProfile } from '@/types/citt';
 import {
   getCampusBySlug,
@@ -39,7 +43,15 @@ export function PhygitalPassCard({
   initialShowQR?: boolean;
   showPublicPageLink?: boolean;
 }) {
-  const { activeUser, isConnected, toggleConnection } = useCittNetwork();
+  const router = useRouter();
+  const {
+    activeUser,
+    isAuthenticated,
+    getConnectionStatus,
+    sendConnectionRequest,
+    acceptConnectionRequest,
+    rejectOrCancelConnection,
+  } = useCittNetwork();
   const [showQRSide, setShowQRSide] = useState(initialShowQR);
   const [copied, setCopied] = useState(false);
   const [originUrl, setOriginUrl] = useState('https://cittconnect.cl');
@@ -57,8 +69,8 @@ export function PhygitalPassCard({
   const campus = getCampusBySlug(profile.campusSlug);
   const school = getSchoolBySlug(profile.schoolSlug);
   const publicProfileUrl = `${originUrl}/u/${profile.username}`;
-  const connected = isConnected(profile.id);
-  const isSelf = profile.id === activeUser.id;
+  const isSelf = isAuthenticated && profile.id === activeUser.id;
+  const connStatus = getConnectionStatus(profile.id);
 
   const initials = profile.fullName
     .split(' ')
@@ -329,27 +341,67 @@ export function PhygitalPassCard({
               {/* Primary Action Bar: + Connect, Save Contact (.vcf), QR & Share */}
               <div className="mt-6 flex flex-wrap items-center gap-2.5 border-t border-theme pt-5">
                 {!isSelf && (
-                  <button
-                    type="button"
-                    onClick={() => toggleConnection(profile.id)}
-                    className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
-                      connected
-                        ? 'bg-theme-inverse text-theme-text-inverse'
-                        : 'bg-[#FFB800] text-[#1A1A1A] hover:bg-[#ffc633]'
-                    }`}
-                  >
-                    {connected ? (
-                      <>
+                  !isAuthenticated ? (
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/acceso?redirect=/u/${profile.username}`)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FFB800] px-4 py-3 text-sm font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      <span>+ Connect</span>
+                    </button>
+                  ) : connStatus === 'connected' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`¿Deseas desvincular tu conexión con ${profile.fullName}?`)) {
+                          rejectOrCancelConnection(profile.id);
+                        }
+                      }}
+                      title="Haz clic para desvincular"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-theme-inverse px-4 py-3 text-sm font-bold text-theme-text-inverse transition hover:opacity-85"
+                    >
+                      <UserCheck className="h-4 w-4 text-[#43B02A]" />
+                      <span>Conectado</span>
+                    </button>
+                  ) : connStatus === 'pending_sent' ? (
+                    <button
+                      type="button"
+                      onClick={() => rejectOrCancelConnection(profile.id)}
+                      title="Haz clic para cancelar solicitud"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-theme bg-theme-subtle px-4 py-3 text-sm font-bold text-theme-secondary transition hover:border-[#E87722] hover:text-[#E87722]"
+                    >
+                      <Clock className="h-4 w-4 text-[#FFB800]" />
+                      <span>Solicitud Enviada</span>
+                    </button>
+                  ) : connStatus === 'pending_received' ? (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => acceptConnectionRequest(profile.id)}
+                        className="inline-flex items-center gap-1 rounded-xl bg-[#43B02A] px-3 py-3 text-sm font-bold text-white transition hover:bg-[#389623]"
+                      >
                         <Check className="h-4 w-4" />
-                        <span>Conectado</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="h-4 w-4" />
-                        <span>+ Connect</span>
-                      </>
-                    )}
-                  </button>
+                        <span>Aceptar</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => rejectOrCancelConnection(profile.id)}
+                        className="inline-flex items-center gap-1 rounded-xl border border-theme bg-theme-surface px-2.5 py-3 text-sm font-bold text-theme-secondary transition hover:text-red-500"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => sendConnectionRequest(profile.id)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FFB800] px-4 py-3 text-sm font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      <span>+ Connect</span>
+                    </button>
+                  )
                 )}
 
                 <button

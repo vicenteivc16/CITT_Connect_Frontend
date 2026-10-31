@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -11,6 +11,7 @@ import {
   Award,
   Building2,
   Check,
+  Clock,
   Compass,
   Copy,
   Download,
@@ -28,6 +29,7 @@ import {
   Share2,
   ShieldCheck,
   Sparkles,
+  UserCheck,
   UserPlus,
   Users,
   X,
@@ -54,13 +56,19 @@ const STATUS_LABELS: Record<
 
 export default function PublicMemberProfilePage() {
   const params = useParams<{ username: string }>();
+  const router = useRouter();
   const {
     profiles,
     projects,
     posts,
     activeUser,
+    isAuthenticated,
     isConnected,
     toggleConnection,
+    getConnectionStatus,
+    sendConnectionRequest,
+    acceptConnectionRequest,
+    rejectOrCancelConnection,
   } = useCittNetwork();
 
   const [copied, setCopied] = useState(false);
@@ -102,17 +110,20 @@ export default function PublicMemberProfilePage() {
   const campus = getCampusBySlug(member.campusSlug);
   const school = getSchoolBySlug(member.schoolSlug);
   const roleInfo = ROLE_CONFIG[member.role];
-  const isSelf = member.id === activeUser.id;
-  const connected = isConnected(member.id);
+  const isSelf = isAuthenticated && member.id === activeUser.id;
+  const connStatus = getConnectionStatus(member.id);
   const publicProfileUrl = `${originUrl}/u/${member.username}`;
   const bannerImage = member.bannerUrl || '/assets/citt-hero-lobby.webp';
 
   const memberProjects = projects.filter(
-    (proj) => proj.leadUsername === member.username
+    (proj) =>
+      proj.leadUsername === member.username ||
+      proj.collaborators?.some((c) => c.username === member.username)
   );
   const relatedSchoolProjects = projects.filter(
     (proj) =>
       proj.leadUsername !== member.username &&
+      !proj.collaborators?.some((c) => c.username === member.username) &&
       (proj.schoolSlug === member.schoolSlug ||
         proj.originCampusSlug === member.campusSlug)
   );
@@ -255,30 +266,74 @@ export default function PublicMemberProfilePage() {
               )}
             </div>
 
-            {/* Acciones Primarias (+ Connect, Guardar vCard, Pase QR, Compartir) */}
+            {/* Acciones Primarias (+ Connect Bilateral, Guardar vCard, Pase QR, Compartir) */}
             <div className="flex flex-wrap items-center gap-2.5 pt-2 sm:pt-4">
               {!isSelf ? (
-                <button
-                  type="button"
-                  onClick={() => toggleConnection(member.id)}
-                  className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition sm:text-sm ${
-                    connected
-                      ? 'bg-theme-inverse text-theme-text-inverse'
-                      : 'bg-[#FFB800] text-[#1A1A1A] hover:bg-[#ffc633]'
-                  }`}
-                >
-                  {connected ? (
-                    <>
+                !isAuthenticated ? (
+                  <Link
+                    href={`/acceso?redirect=/u/${member.username}`}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633] sm:text-sm"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>+ Connect</span>
+                  </Link>
+                ) : connStatus === 'connected' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `¿Deseas desvincular tu conexión con ${member.fullName}?`
+                        )
+                      ) {
+                        rejectOrCancelConnection(member.id);
+                      }
+                    }}
+                    title="Haz clic para desvincular"
+                    className="inline-flex items-center gap-2 rounded-xl bg-theme-inverse px-5 py-2.5 text-xs font-bold text-theme-text-inverse transition hover:opacity-85 sm:text-sm"
+                  >
+                    <UserCheck className="h-4 w-4 text-[#43B02A]" />
+                    <span>Conectado en mi Red</span>
+                  </button>
+                ) : connStatus === 'pending_sent' ? (
+                  <button
+                    type="button"
+                    onClick={() => rejectOrCancelConnection(member.id)}
+                    title="Haz clic para cancelar solicitud"
+                    className="inline-flex items-center gap-2 rounded-xl border border-theme bg-theme-subtle px-4 py-2.5 text-xs font-bold text-theme-secondary transition hover:border-[#E87722] hover:text-[#E87722] sm:text-sm"
+                  >
+                    <Clock className="h-4 w-4 text-[#FFB800]" />
+                    <span>Solicitud Enviada (Cancelar)</span>
+                  </button>
+                ) : connStatus === 'pending_received' ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => acceptConnectionRequest(member.id)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#43B02A] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#389623] sm:text-sm"
+                    >
                       <Check className="h-4 w-4" />
-                      <span>Conectado en mi Red</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="h-4 w-4" />
-                      <span>+ Connect</span>
-                    </>
-                  )}
-                </button>
+                      <span>Aceptar Vínculo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => rejectOrCancelConnection(member.id)}
+                      className="inline-flex items-center gap-1 rounded-xl border border-theme bg-theme-surface px-3 py-2.5 text-xs font-bold text-theme-secondary transition hover:text-red-500 sm:text-sm"
+                    >
+                      <X className="h-4 w-4" />
+                      <span>Ignorar</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => sendConnectionRequest(member.id)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633] sm:text-sm"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>+ Connect</span>
+                  </button>
+                )
               ) : (
                 <Link
                   href="/mi-perfil"
@@ -750,10 +805,10 @@ export default function PublicMemberProfilePage() {
                           </a>
                         )}
                         <Link
-                          href="/proyectos"
+                          href={`/proyectos/${proj.slug}`}
                           className="inline-flex items-center gap-1.5 rounded-xl bg-[#FFB800] px-3.5 py-1.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
                         >
-                          <span>Colaborar</span>
+                          <span>Ver Iniciativa</span>
                           <ArrowUpRight className="h-3.5 w-3.5" />
                         </Link>
                       </div>

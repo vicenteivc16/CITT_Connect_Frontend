@@ -193,3 +193,26 @@ export interface CittPinterestPin {
   schoolSlug: DuocSchoolSlug;
   authorName: string;
 }
+
+export type ConnectionStatus =
+  | 'none'
+  | 'pending_sent'
+  | 'pending_received'
+  | 'connected';
+
+export interface ConnectionRequest {
+  id: string;
+  requesterId: string;
+  receiverId: string;
+  status: 'pending' | 'accepted';
+  createdAt: string;
+}
+
+export interface CittNfcTag {
+  tagUid: string;
+  status: 'unassigned' | 'active' | 'suspended';
+  assignedUsername?: string;
+  batchLabel?: string;
+  lastScannedAt?: string;
+}
+

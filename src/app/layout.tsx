@@ -23,6 +23,15 @@ export const metadata: Metadata = {
     'CITT Connect — Red Nacional de Innovación & Transferencia Tecnológica Duoc UC',
   description:
     'Portal editorial, directorio nacional con vínculo +Connect y credencial QR dinámica para los Centros de Innovación y Transferencia Tecnológica (CITT) de Duoc UC.',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/assets/citt-logo.webp',
+    apple: '/assets/citt-logo.webp',
+  },
+};
+
+export const viewport = {
+  themeColor: '#FFB800',
 };
 
 const ANTI_FOUC_SCRIPT = `

@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   ArrowRight,
@@ -15,6 +16,7 @@ import {
   Globe,
   HandHelping,
   Layers,
+  LogIn,
   MapPin,
   Megaphone,
   Newspaper,
@@ -25,6 +27,7 @@ import {
   Share2,
   Sparkles,
   Tag,
+  Trash2,
   User,
   Users,
   X,
@@ -36,7 +39,7 @@ import {
   getCampusBySlug,
 } from '@/data/citt-catalog';
 import { RoleBadge } from '@/components/RoleBadge';
-import { CittBlogArticle, CittFeedPost } from '@/types/citt';
+import { CittBlogArticle, CittFeedPost, CittRole } from '@/types/citt';
 
 const CATEGORY_META: Record<
   CittFeedPost['category'],
@@ -78,7 +81,9 @@ type NewsDesk =
   | 'reportajes';
 
 export default function NationalGazettePage() {
-  const { posts, activeUser, addPost } = useCittNetwork();
+  const router = useRouter();
+  const { posts, activeUser, isAuthenticated, addPost, deletePost } =
+    useCittNetwork();
 
   // State
   const [activeDesk, setActiveDesk] = useState<NewsDesk>('todos');
@@ -88,6 +93,7 @@ export default function NationalGazettePage() {
   const [readingArticle, setReadingArticle] = useState<CittBlogArticle | null>(
     null
   );
+  const [readingPost, setReadingPost] = useState<CittFeedPost | null>(null);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -96,8 +102,61 @@ export default function NationalGazettePage() {
   const [imageUrl, setImageUrl] = useState('');
   const [category, setCategory] =
     useState<CittFeedPost['category']>('noticia_citt');
+  const [isLeadStory, setIsLeadStory] = useState(false);
   const [actionLabel, setActionLabel] = useState('');
   const [actionUrl, setActionUrl] = useState('');
+
+  // Available categories by role
+  const availableCategories = useMemo(() => {
+    const all: Array<{ value: CittFeedPost['category']; label: string }> = [
+      {
+        value: 'noticia_citt',
+        label: 'Innovación & Proyectos CITT (Logro o Avance)',
+      },
+      {
+        value: 'oportunidad_partner',
+        label: 'Mercado & Partners (Práctica, Mentoría o Vacante)',
+      },
+      {
+        value: 'puente_consejero',
+        label: 'Tribuna Consejeros de Carrera (Puente Inter-Escuelas)',
+      },
+      {
+        value: 'evento_nacional',
+        label: 'Agenda Nacional (Hackathon, Torneo o Charla)',
+      },
+      {
+        value: 'pedir_ayuda',
+        label: 'Cable Urgente / Clasificado SOS (Ayuda Inmediata)',
+      },
+    ];
+
+    if (!isAuthenticated) return all;
+    const role = activeUser.role;
+    if (role === 'dev' || role === 'personal_duoc') return all;
+    if (role === 'lider_citt') {
+      return all.filter((c) =>
+        ['noticia_citt', 'evento_nacional', 'pedir_ayuda'].includes(c.value)
+      );
+    }
+    if (role === 'consejero_carrera') {
+      return all.filter((c) =>
+        ['puente_consejero', 'noticia_citt', 'pedir_ayuda'].includes(c.value)
+      );
+    }
+    if (role === 'partner') {
+      return all.filter((c) =>
+        ['oportunidad_partner', 'noticia_citt'].includes(c.value)
+      );
+    }
+    return all.filter((c) =>
+      ['noticia_citt', 'pedir_ayuda'].includes(c.value)
+    );
+  }, [activeUser.role, isAuthenticated]);
+
+  const canMarkLeadStory =
+    isAuthenticated &&
+    (activeUser.role === 'dev' || activeUser.role === 'personal_duoc');
 
   // Breaking news ticker items
   const tickerItems = useMemo(() => {
@@ -189,6 +248,10 @@ export default function NationalGazettePage() {
 
   const handlePublish = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      router.push('/acceso?redirect=/muro');
+      return;
+    }
     if (!title.trim() || !content.trim()) return;
 
     addPost({
@@ -202,6 +265,7 @@ export default function NationalGazettePage() {
       subtitle: subtitle.trim() || undefined,
       content: content.trim(),
       imageUrl: imageUrl.trim() || undefined,
+      isLeadStory: canMarkLeadStory ? isLeadStory : false,
       readTime: '2 min de lectura',
       actionLabel:
         actionLabel.trim() ||
@@ -220,6 +284,7 @@ export default function NationalGazettePage() {
     setImageUrl('');
     setActionLabel('');
     setActionUrl('');
+    setIsLeadStory(false);
     setCategory('noticia_citt');
     setModalOpen(false);
   };
@@ -301,49 +366,91 @@ export default function NationalGazettePage() {
                     </Dialog.Close>
                   </div>
 
-                  <form onSubmit={handlePublish} className="mt-5 space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-theme-primary">
-                        Sección / Desk Periodístico *
-                      </label>
-                      <select
-                        value={category}
-                        onChange={(e) =>
-                          setCategory(e.target.value as CittFeedPost['category'])
-                        }
-                        className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                      >
-                        <option value="noticia_citt">
-                          Innovación & Proyectos CITT (Logro o Avance)
-                        </option>
-                        <option value="oportunidad_partner">
-                          Mercado & Partners (Práctica, Mentoría o Vacante)
-                        </option>
-                        <option value="puente_consejero">
-                          Tribuna Consejeros de Carrera (Puente Inter-Escuelas)
-                        </option>
-                        <option value="evento_nacional">
-                          Agenda Nacional (Hackathon, Torneo o Charla)
-                        </option>
-                        <option value="pedir_ayuda">
-                          Cable Urgente / Clasificado SOS (Ayuda Inmediata)
-                        </option>
-                      </select>
+                  {!isAuthenticated ? (
+                    <div className="py-8 text-center space-y-4">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFB800]/15 text-[#FFB800]">
+                        <PenTool className="h-7 w-7" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <h4 className="font-serif text-base font-bold text-theme-primary">
+                          Identificación Requerida para Redacción
+                        </h4>
+                        <p className="mx-auto max-w-md text-xs text-theme-secondary leading-relaxed">
+                          Para despachar noticias institucionales, convocatorias abiertas o cables de ayuda SOS en La Gaceta CITT, debes ingresar con tu cuenta Duoc UC.
+                        </p>
+                      </div>
+                      <div className="pt-2 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                        <Link
+                          href="/acceso?redirect=/muro"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
+                        >
+                          <LogIn className="h-4 w-4" />
+                          <span>Iniciar Sesión / Registrarme</span>
+                        </Link>
+                        <Dialog.Close asChild>
+                          <button
+                            type="button"
+                            className="rounded-xl border border-theme px-4 py-2.5 text-xs font-semibold text-theme-secondary hover:bg-theme-subtle hover:text-theme-primary"
+                          >
+                            Cerrar
+                          </button>
+                        </Dialog.Close>
+                      </div>
                     </div>
+                  ) : (
+                    <form onSubmit={handlePublish} className="mt-5 space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-theme-primary">
+                          Sección / Desk Periodístico *
+                        </label>
+                        <select
+                          value={category}
+                          onChange={(e) =>
+                            setCategory(
+                              e.target.value as CittFeedPost['category']
+                            )
+                          }
+                          className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3 py-2 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                        >
+                          {availableCategories.map((c) => (
+                            <option key={c.value} value={c.value}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-theme-primary">
-                        Titular de Prensa *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Ej. Estudiantes de Sede Maipú Diseñan Simulador de Rescate Minero..."
-                        className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                      />
-                    </div>
+                      {canMarkLeadStory && (
+                        <div className="flex items-center gap-2.5 rounded-xl border border-[#FFB800]/40 bg-[#FFB800]/10 p-3">
+                          <input
+                            type="checkbox"
+                            id="lead-story-toggle"
+                            checked={isLeadStory}
+                            onChange={(e) => setIsLeadStory(e.target.checked)}
+                            className="h-4 w-4 rounded border-theme text-[#FFB800] focus:ring-[#FFB800]"
+                          />
+                          <label
+                            htmlFor="lead-story-toggle"
+                            className="cursor-pointer text-xs font-bold text-theme-primary"
+                          >
+                            ⭐ Marcar como Gran Titular de Portada (Lead Story Nacional)
+                          </label>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-bold text-theme-primary">
+                          Titular de Prensa *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          placeholder="Ej. Estudiantes de Sede Maipú Diseñan Simulador de Rescate Minero..."
+                          className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                        />
+                      </div>
 
                     <div>
                       <label className="block text-xs font-bold text-theme-primary">
@@ -439,6 +546,7 @@ export default function NationalGazettePage() {
                       </button>
                     </div>
                   </form>
+                )}
                 </Dialog.Content>
               </Dialog.Portal>
             </Dialog.Root>
@@ -662,7 +770,7 @@ export default function NationalGazettePage() {
                     {leadStory.content}
                   </p>
 
-                  {/* Byline Periodístico y Botón de Acción */}
+                  {/* Byline Periodístico, Acciones y Botón de Lectura */}
                   <div className="flex flex-wrap items-center justify-between gap-4 border-t border-theme pt-4">
                     <div className="flex items-center gap-3">
                       <RoleBadge role={leadStory.authorRole} showTooltip={false} />
@@ -682,15 +790,48 @@ export default function NationalGazettePage() {
                       </div>
                     </div>
 
-                    {leadStory.actionUrl && (
-                      <Link
-                        href={leadStory.actionUrl}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-4 py-2.5 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isAuthenticated &&
+                        (activeUser.username === leadStory.authorUsername ||
+                          activeUser.role === 'dev') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  '¿Eliminar esta publicación de portada en La Gaceta?'
+                                )
+                              ) {
+                                deletePost(leadStory.id);
+                              }
+                            }}
+                            aria-label="Eliminar publicación de portada"
+                            className="rounded-xl border border-red-500/30 p-2 text-red-500 hover:bg-red-500/10 transition"
+                            title="Eliminar publicación"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+
+                      <button
+                        type="button"
+                        onClick={() => setReadingPost(leadStory)}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-bold text-theme-primary transition hover:bg-theme-elevated"
                       >
-                        <span>{leadStory.actionLabel || 'Leer completa'}</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                    )}
+                        <BookOpen className="h-3.5 w-3.5" />
+                        <span>Leer Crónica Completa</span>
+                      </button>
+
+                      {leadStory.actionUrl && (
+                        <Link
+                          href={leadStory.actionUrl}
+                          className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-4 py-2.5 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
+                        >
+                          <span>{leadStory.actionLabel || 'Conectar'}</span>
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               </article>
@@ -712,18 +853,25 @@ export default function NationalGazettePage() {
                   {secondaryStories.map((post) => {
                     const campus = getCampusBySlug(post.campusSlug);
                     const meta = CATEGORY_META[post.category];
+                    const canDelete =
+                      isAuthenticated &&
+                      (activeUser.username === post.authorUsername ||
+                        activeUser.role === 'dev');
 
                     return (
                       <article
                         key={post.id}
-                        className="flex flex-col justify-between overflow-hidden rounded-3xl border border-theme bg-theme-surface shadow-theme-card transition hover:border-[#FFB800]/50"
+                        className="group flex flex-col justify-between overflow-hidden rounded-3xl border border-theme bg-theme-surface shadow-theme-card transition hover:border-[#FFB800]/50"
                       >
                         {post.imageUrl && (
-                          <div className="relative aspect-video w-full overflow-hidden bg-black">
+                          <div
+                            onClick={() => setReadingPost(post)}
+                            className="relative aspect-video w-full cursor-pointer overflow-hidden bg-black"
+                          >
                             <img
                               src={post.imageUrl}
                               alt={post.title}
-                              className="h-full w-full object-cover transition-transform duration-500 hover:scale-105 opacity-90"
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-90"
                             />
                             <div className="absolute top-2.5 left-2.5">
                               <span className="rounded-full border border-white/20 bg-black/60 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-md">
@@ -738,12 +886,18 @@ export default function NationalGazettePage() {
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#307FE2]">
                               {campus.name}
                             </span>
-                            <h4 className="font-serif mt-1 text-base font-bold leading-snug text-theme-primary">
+                            <h4
+                              onClick={() => setReadingPost(post)}
+                              className="font-serif mt-1 text-base font-bold leading-snug text-theme-primary cursor-pointer hover:text-[#307FE2] transition"
+                            >
                               {post.title}
                             </h4>
                           </div>
 
-                          <p className="line-clamp-3 text-xs leading-relaxed text-theme-secondary">
+                          <p
+                            onClick={() => setReadingPost(post)}
+                            className="line-clamp-3 text-xs leading-relaxed text-theme-secondary cursor-pointer hover:text-theme-primary transition"
+                          >
                             {post.content}
                           </p>
                         </div>
@@ -763,15 +917,36 @@ export default function NationalGazettePage() {
                               </span>
                             </div>
 
-                            {post.actionUrl && (
-                              <Link
-                                href={post.actionUrl}
-                                className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#307FE2] hover:underline"
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        '¿Deseas eliminar este despacho de La Gaceta?'
+                                      )
+                                    ) {
+                                      deletePost(post.id);
+                                    }
+                                  }}
+                                  aria-label="Eliminar despacho"
+                                  className="rounded-lg p-1 text-red-500 hover:bg-red-500/10 transition"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => setReadingPost(post)}
+                                className="inline-flex items-center gap-1 text-xs font-bold text-[#FFB800] hover:underline"
                               >
-                                <span>Ver</span>
+                                <span>Leer</span>
                                 <ArrowRight className="h-3 w-3" />
-                              </Link>
-                            )}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </article>
@@ -842,10 +1017,16 @@ export default function NationalGazettePage() {
                         <span>{cable.createdAt}</span>
                       </div>
 
-                      <h4 className="text-xs font-bold text-theme-primary leading-snug">
+                      <h4
+                        onClick={() => setReadingPost(cable)}
+                        className="text-xs font-bold text-theme-primary leading-snug cursor-pointer hover:text-[#E87722] transition"
+                      >
                         {cable.title}
                       </h4>
-                      <p className="text-[11px] leading-relaxed text-theme-secondary line-clamp-2">
+                      <p
+                        onClick={() => setReadingPost(cable)}
+                        className="text-[11px] leading-relaxed text-theme-secondary line-clamp-2 cursor-pointer hover:text-theme-primary transition"
+                      >
                         {cable.content}
                       </p>
 
@@ -856,15 +1037,47 @@ export default function NationalGazettePage() {
                             {cable.authorName.split(' ')[0]}
                           </strong>
                         </span>
-                        {cable.actionUrl && (
-                          <Link
-                            href={cable.actionUrl}
-                            className="inline-flex items-center gap-1 font-bold text-[#307FE2] hover:underline"
+                        <div className="flex items-center gap-1.5">
+                          {isAuthenticated &&
+                            (activeUser.username === cable.authorUsername ||
+                              activeUser.role === 'dev') && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (
+                                    confirm(
+                                      '¿Deseas eliminar este cable SOS de La Gaceta?'
+                                    )
+                                  ) {
+                                    deletePost(cable.id);
+                                  }
+                                }}
+                                aria-label="Eliminar cable"
+                                className="rounded p-1 text-red-500 hover:bg-red-500/10 transition"
+                                title="Eliminar cable"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
+
+                          <button
+                            type="button"
+                            onClick={() => setReadingPost(cable)}
+                            className="font-bold text-[#FFB800] hover:underline"
                           >
-                            <span>Responder</span>
-                            <ArrowRight className="h-3 w-3" />
-                          </Link>
-                        )}
+                            Detalle
+                          </button>
+
+                          {cable.actionUrl && (
+                            <Link
+                              href={cable.actionUrl}
+                              className="inline-flex items-center gap-1 font-bold text-[#307FE2] hover:underline"
+                            >
+                              <span>Responder</span>
+                              <ArrowRight className="h-3 w-3" />
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </article>
                   );
@@ -1055,6 +1268,132 @@ export default function NationalGazettePage() {
               >
                 Cerrar Lectura
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. MODAL DE LECTURA DE NOTICIA / DESPACHO COMPLETO */}
+      {readingPost && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
+        >
+          <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setReadingPost(null)}
+              aria-label="Cerrar modal de lectura"
+              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[#FFB800] px-3 py-1 text-xs font-black text-[#1A1A1A]">
+                {CATEGORY_META[readingPost.category].sectionName}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-theme bg-theme-subtle px-2.5 py-1 text-xs font-medium text-theme-secondary">
+                <MapPin className="h-3 w-3 text-[#307FE2]" />
+                <span>{getCampusBySlug(readingPost.campusSlug).name}</span>
+              </span>
+              {readingPost.readTime && (
+                <span className="inline-flex items-center gap-1 text-xs text-theme-secondary">
+                  <Clock className="h-3 w-3" />
+                  <span>{readingPost.readTime}</span>
+                </span>
+              )}
+            </div>
+
+            <h2 className="font-serif mt-4 text-2xl font-black text-theme-primary sm:text-3xl leading-tight">
+              {readingPost.title}
+            </h2>
+
+            {readingPost.subtitle && (
+              <p className="mt-2 text-sm font-semibold text-theme-secondary sm:text-base leading-relaxed">
+                {readingPost.subtitle}
+              </p>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-y border-theme py-3 text-xs text-theme-secondary">
+              <div className="flex items-center gap-2.5">
+                <RoleBadge role={readingPost.authorRole} showTooltip={false} />
+                <div>
+                  <p className="font-bold text-theme-primary">
+                    Por{' '}
+                    <Link
+                      href={`/u/${readingPost.authorUsername}`}
+                      className="hover:underline"
+                    >
+                      {readingPost.authorName}
+                    </Link>
+                  </p>
+                  <p className="text-[11px]">
+                    {readingPost.authorOccupation} · {readingPost.createdAt}
+                  </p>
+                </div>
+              </div>
+
+              {isAuthenticated &&
+                (activeUser.username === readingPost.authorUsername ||
+                  activeUser.role === 'dev') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        confirm(
+                          '¿Estás seguro de eliminar esta publicación de La Gaceta CITT?'
+                        )
+                      ) {
+                        deletePost(readingPost.id);
+                        setReadingPost(null);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-500 transition hover:bg-red-500/20"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Eliminar Publicación</span>
+                  </button>
+                )}
+            </div>
+
+            {readingPost.imageUrl && (
+              <div className="relative mt-6 aspect-video w-full overflow-hidden rounded-2xl bg-black">
+                <img
+                  src={readingPost.imageUrl}
+                  alt={readingPost.title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            )}
+
+            <div className="mt-6 space-y-3 text-sm leading-relaxed text-theme-primary/90 font-serif">
+              {readingPost.content.split('\n\n').map((paragraph, idx) => (
+                <p key={idx} className="leading-relaxed">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-theme pt-4">
+              <button
+                type="button"
+                onClick={() => setReadingPost(null)}
+                className="rounded-xl border border-theme px-4 py-2 text-xs font-semibold text-theme-secondary hover:bg-theme-subtle hover:text-theme-primary"
+              >
+                Cerrar Lectura
+              </button>
+
+              {readingPost.actionUrl && (
+                <Link
+                  href={readingPost.actionUrl}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
+                >
+                  <span>{readingPost.actionLabel || 'Conectar o Postular'}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
           </div>
         </div>

@@ -229,12 +229,6 @@ export const CITT_CAMPUSES: CittCampus[] = [
     region: 'Metropolitana',
   },
   {
-    slug: 'vina-del-mar',
-    name: 'Sede Viña del Mar',
-    shortName: 'Viña del Mar',
-    region: 'Valparaíso',
-  },
-  {
     slug: 'plaza-oeste',
     name: 'Sede Plaza Oeste',
     shortName: 'Plaza Oeste',
@@ -253,10 +247,58 @@ export const CITT_CAMPUSES: CittCampus[] = [
     region: 'Metropolitana',
   },
   {
+    slug: 'plaza-norte',
+    name: 'Sede Plaza Norte',
+    shortName: 'Plaza Norte',
+    region: 'Metropolitana',
+  },
+  {
+    slug: 'plaza-vespucio',
+    name: 'Sede Plaza Vespucio',
+    shortName: 'Plaza Vespucio',
+    region: 'Metropolitana',
+  },
+  {
+    slug: 'alameda',
+    name: 'Sede Alameda',
+    shortName: 'Alameda',
+    region: 'Metropolitana',
+  },
+  {
+    slug: 'alonso-de-ovalle',
+    name: 'Sede Padre Alonso de Ovalle',
+    shortName: 'Alonso de Ovalle',
+    region: 'Metropolitana',
+  },
+  {
+    slug: 'san-bernardo',
+    name: 'Sede San Bernardo',
+    shortName: 'San Bernardo',
+    region: 'Metropolitana',
+  },
+  {
+    slug: 'melipilla',
+    name: 'Sede Melipilla',
+    shortName: 'Melipilla',
+    region: 'Metropolitana',
+  },
+  {
+    slug: 'vina-del-mar',
+    name: 'Sede Viña del Mar',
+    shortName: 'Viña del Mar',
+    region: 'Valparaíso',
+  },
+  {
     slug: 'valparaiso',
     name: 'Sede Valparaíso',
     shortName: 'Valparaíso',
     region: 'Valparaíso',
+  },
+  {
+    slug: 'villarrica',
+    name: 'Sede Villarrica',
+    shortName: 'Villarrica',
+    region: 'La Araucanía',
   },
   {
     slug: 'puerto-montt',
@@ -265,16 +307,16 @@ export const CITT_CAMPUSES: CittCampus[] = [
     region: 'Los Lagos',
   },
   {
-    slug: 'plaza-norte',
-    name: 'Sede Plaza Norte',
-    shortName: 'Plaza Norte',
-    region: 'Metropolitana',
+    slug: 'nacimiento',
+    name: 'Sede Nacimiento',
+    shortName: 'Nacimiento',
+    region: 'Biobío',
   },
   {
-    slug: 'alameda',
-    name: 'Sede Alameda',
-    shortName: 'Alameda',
-    region: 'Metropolitana',
+    slug: 'arauco',
+    name: 'Sede Arauco',
+    shortName: 'Arauco',
+    region: 'Biobío',
   },
 ];
 

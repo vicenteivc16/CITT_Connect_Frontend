@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   ArrowRight,
@@ -103,16 +104,21 @@ const REGIONS = [
 type QuickTab = 'todos' | 'iniciativas' | 'ayuda' | 'colaboradores' | 'video';
 
 export default function InterCampusProjectsPage() {
+  const router = useRouter();
   const {
     projects,
     activeUser,
+    isAuthenticated,
     addProject,
     toggleFeaturedProject,
   } = useCittNetwork();
 
-  // Permisos para destacar: Core Dev o Personal Duoc
+  // Permisos para destacar: Core Dev, Personal Duoc o Líder CITT
   const canFeatureProjects =
-    activeUser.role === 'dev' || activeUser.role === 'personal_duoc';
+    isAuthenticated &&
+    (activeUser.role === 'dev' ||
+      activeUser.role === 'personal_duoc' ||
+      activeUser.role === 'lider_citt');
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -281,6 +287,10 @@ export default function InterCampusProjectsPage() {
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      router.push('/acceso?redirect=/proyectos');
+      return;
+    }
     if (!title.trim() || !summary.trim()) return;
 
     const specs = neededSpecsInput

@@ -1,14 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
+  ArrowLeft,
   ArrowUpRight,
+  Award,
+  Camera,
   Check,
   Image as ImageIcon,
+  LogIn,
   Plus,
   QrCode,
+  Radio,
   Save,
+  Shield,
+  Smartphone,
+  Trash2,
+  Upload,
+  UserCheck,
   X,
 } from 'lucide-react';
 import { useCittNetwork } from '@/context/CittNetworkContext';
@@ -20,18 +30,63 @@ import {
 } from '@/data/citt-catalog';
 import { CittMemberProfile, CittRole, DuocSchoolSlug } from '@/types/citt';
 import { PhygitalPassCard } from '@/components/PhygitalPassCard';
+import { RoleBadge } from '@/components/RoleBadge';
+
+function ensureHttpUrl(url?: string): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
 
 export default function MyProfileEditorPage() {
-  const { activeUser, updateActiveUserProfile } = useCittNetwork();
+  const { activeUser, isAuthenticated, updateActiveUserProfile } = useCittNetwork();
 
   const [formState, setFormState] = useState<CittMemberProfile>(activeUser);
   const [newSpecialty, setNewSpecialty] = useState('');
+  const [newAchievement, setNewAchievement] = useState('');
   const [savedNotice, setSavedNotice] = useState(false);
   const [previewInQrMode, setPreviewInQrMode] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFormState(activeUser);
   }, [activeUser]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="mx-auto max-w-lg rounded-3xl border border-theme bg-theme-surface p-8 text-center shadow-theme-card">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFB800]/15 text-[#FFB800]">
+          <LogIn className="h-7 w-7" />
+        </div>
+        <h1 className="mt-4 text-xl font-bold text-theme-primary">
+          Acceso Requerido
+        </h1>
+        <p className="mt-2 text-sm text-theme-secondary">
+          Debes iniciar sesión con tu cuenta de CITT Connect para configurar tu perfil,
+          subir tu fotografía de credencial y personalizar tu banner.
+        </p>
+        <div className="mt-6 flex justify-center gap-3">
+          <Link
+            href="/acceso?redirect=/mi-perfil"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-5 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
+          >
+            <span>Iniciar Sesión / Acceso Rápido</span>
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/directorio"
+            className="inline-flex items-center gap-2 rounded-xl border border-theme bg-theme-subtle px-4 py-2.5 text-xs font-bold text-theme-primary"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Volver al Directorio</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleFieldChange = <K extends keyof CittMemberProfile>(
     key: K,
@@ -43,11 +98,39 @@ export default function MyProfileEditorPage() {
     }));
   };
 
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido (JPG, PNG o WEBP).');
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      alert('La imagen excede el límite de 3 MB. Elige una imagen más liviana.');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      handleFieldChange('avatarUrl', result);
+      setIsUploadingAvatar(false);
+    };
+    reader.onerror = () => {
+      setIsUploadingAvatar(false);
+      alert('Error al leer el archivo de imagen local.');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAddSpecialty = () => {
     const trimmed = newSpecialty.trim();
     if (!trimmed) return;
-    if (!formState.specialties.includes(trimmed)) {
-      handleFieldChange('specialties', [...formState.specialties, trimmed]);
+    if (!formState.specialties?.includes(trimmed)) {
+      handleFieldChange('specialties', [...(formState.specialties || []), trimmed]);
     }
     setNewSpecialty('');
   };
@@ -55,13 +138,36 @@ export default function MyProfileEditorPage() {
   const handleRemoveSpecialty = (specToRemove: string) => {
     handleFieldChange(
       'specialties',
-      formState.specialties.filter((s) => s !== specToRemove)
+      (formState.specialties || []).filter((s) => s !== specToRemove)
+    );
+  };
+
+  const handleAddAchievement = () => {
+    const trimmed = newAchievement.trim();
+    if (!trimmed) return;
+    handleFieldChange('achievements', [...(formState.achievements || []), trimmed]);
+    setNewAchievement('');
+  };
+
+  const handleRemoveAchievement = (indexToRemove: number) => {
+    handleFieldChange(
+      'achievements',
+      (formState.achievements || []).filter((_, idx) => idx !== indexToRemove)
     );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateActiveUserProfile(formState);
+
+    const sanitizedProfile: CittMemberProfile = {
+      ...formState,
+      linkedinUrl: ensureHttpUrl(formState.linkedinUrl),
+      githubUrl: ensureHttpUrl(formState.githubUrl),
+      portfolioUrl: ensureHttpUrl(formState.portfolioUrl),
+      instagramUrl: ensureHttpUrl(formState.instagramUrl),
+    };
+
+    updateActiveUserProfile(sanitizedProfile);
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2600);
   };
@@ -74,8 +180,8 @@ export default function MyProfileEditorPage() {
             Editor de Perfil Social, Banner & Pase QR
           </h1>
           <p className="mt-1 max-w-[65ch] text-sm text-theme-secondary">
-            Personaliza tu banner de portada, trayectoria académica, datos de
-            contacto y especialidades. Tu perfil social público{' '}
+            Personaliza tu fotografía de credencial, banner de portada, trayectoria académica, datos de
+            contacto y especialidades. Tu credencial pública{' '}
             <code className="font-mono font-bold text-theme-primary">
               /u/{formState.username}
             </code>{' '}
@@ -88,7 +194,7 @@ export default function MyProfileEditorPage() {
             href={`/u/${formState.username}`}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-theme-subtle px-4 py-2.5 text-xs font-bold text-theme-primary transition hover:bg-[#FFB800] hover:text-[#1A1A1A]"
           >
-            <span>Ver Perfil Social (/u/{formState.username})</span>
+            <span>Ver Mi Credencial Pública</span>
             <ArrowUpRight className="h-4 w-4" />
           </Link>
 
@@ -98,51 +204,84 @@ export default function MyProfileEditorPage() {
             className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#FFB800] px-4 py-2.5 text-xs font-bold text-[#1A1A1A] transition hover:bg-[#ffc633]"
           >
             <QrCode className="h-4 w-4" />
-            <span>
-              {previewInQrMode
-                ? 'Ver Vista Previa de Datos'
-                : 'Ver / Descargar mi Código QR'}
-            </span>
+            <span>{previewInQrMode ? 'Ver Tarjeta Datos' : 'Ver Código QR'}</span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        {/* Left Column: Live Contact & Social Form */}
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        {/* Left Column: Form Controls */}
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card lg:col-span-7"
+          className="space-y-6 rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card sm:p-8 lg:col-span-7"
         >
-          {/* Banner de Portada Social (Selector Visual + URL Personalizada) */}
+          {/* Avatar Upload Section */}
           <div className="space-y-3 border-b border-theme pb-6">
-            <h2 className="inline-flex items-center gap-2 text-base font-black text-theme-primary">
-              <ImageIcon className="h-4 w-4 text-[#FFB800]" />
-              <span>Banner de Portada para tu Perfil Social (/u/{formState.username})</span>
+            <h2 className="text-sm font-bold text-theme-primary">
+              Fotografía de Credencial & Identidad Phygital
             </h2>
-            <p className="text-xs text-theme-secondary">
-              Elige uno de los banners oficiales de laboratorios CITT o ingresa
-              una URL de imagen personalizada:
-            </p>
+            <div className="flex flex-wrap items-center gap-5">
+              <div className="relative">
+                <img
+                  src={formState.avatarUrl || '/assets/citt-logo.webp'}
+                  alt={formState.fullName}
+                  className="h-20 w-20 rounded-2xl border-2 border-[#FFB800] object-cover shadow-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -right-2 -bottom-2 flex h-8 w-8 items-center justify-center rounded-xl bg-[#FFB800] text-[#1A1A1A] shadow-md transition hover:bg-[#ffc633]"
+                  title="Subir nueva foto"
+                >
+                  <Camera className="h-4 w-4" />
+                </button>
+              </div>
 
-            {/* Vista Previa Rápida del Banner Seleccionado */}
-            <div className="relative h-28 w-full overflow-hidden rounded-2xl bg-theme-subtle">
-              <img
-                src={formState.bannerUrl || '/assets/citt-hero-lobby.webp'}
-                alt="Vista previa de tu banner de portada"
-                className="h-full w-full object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <span className="absolute bottom-2.5 left-3 rounded-lg bg-[#1A1A1A]/85 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
-                Banner activo en /u/{formState.username}
-              </span>
+              <div className="space-y-1.5">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleAvatarFileSelect}
+                  className="hidden"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-elevated px-3 py-1.5 text-xs font-bold text-theme-primary transition hover:border-[#FFB800]"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>{isUploadingAvatar ? 'Procesando...' : 'Subir Imagen Local'}</span>
+                  </button>
+                  {formState.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleFieldChange('avatarUrl', undefined)}
+                      className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-theme-secondary hover:text-red-500"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Restablecer</span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-theme-secondary">
+                  Formatos compatibles: WEBP, PNG o JPG (máx. 3 MB). Se visualiza en tu credencial y en el Muro.
+                </p>
+              </div>
             </div>
+          </div>
 
-            {/* Selector de 6 Presets Oficiales CITT */}
+          {/* Banner Selector */}
+          <div className="space-y-3">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-theme-primary">
+              <ImageIcon className="h-4 w-4 text-[#FFB800]" />
+              <span>Banner de Portada Duoc UC</span>
+            </h2>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {CITT_BANNER_PRESETS.map((preset) => {
-                const isSelected =
-                  (formState.bannerUrl || '/assets/citt-hero-lobby.webp') ===
-                  preset.imageUrl;
+                const isSelected = formState.bannerUrl === preset.imageUrl;
                 return (
                   <button
                     key={preset.id}
@@ -151,7 +290,7 @@ export default function MyProfileEditorPage() {
                     className={`flex flex-col items-start rounded-xl p-2 text-left text-xs transition ${
                       isSelected
                         ? 'bg-[#FFB800] font-bold text-[#1A1A1A]'
-                        : 'bg-theme-elevated text-theme-primary hover:bg-theme-subtle'
+                        : 'border border-theme bg-theme-elevated text-theme-primary hover:border-[#FFB800]'
                     }`}
                   >
                     <span className="line-clamp-1 font-bold">
@@ -183,6 +322,30 @@ export default function MyProfileEditorPage() {
             </div>
           </div>
 
+          {/* Availability Switch */}
+          <div className="flex items-center justify-between rounded-2xl border border-theme bg-theme-subtle p-4">
+            <div className="space-y-0.5">
+              <p className="text-xs font-bold text-theme-primary">
+                Disponible para Proyectos Inter-Sedes
+              </p>
+              <p className="text-[11px] text-theme-secondary">
+                Muestra la insignia verde &ldquo;Disponible para Proyectos&rdquo; en tu credencial pública.
+              </p>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={formState.isOpenToCollaborate}
+                onChange={(e) =>
+                  handleFieldChange('isOpenToCollaborate', e.target.checked)
+                }
+                className="peer sr-only"
+              />
+              <div className="peer h-6 w-11 rounded-full bg-theme-elevated peer-checked:bg-[#43B02A] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full" />
+            </label>
+          </div>
+
+          {/* Academic & Identity Info */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-theme-primary">
@@ -199,7 +362,7 @@ export default function MyProfileEditorPage() {
 
             <div>
               <label className="block text-xs font-bold text-theme-primary">
-                Username (URL Pública `/u/...`) *
+                Username (Enlace `/u/...`) *
               </label>
               <input
                 type="text"
@@ -248,7 +411,7 @@ export default function MyProfileEditorPage() {
 
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-theme-primary">
-                Título o Carrera *
+                Carrera o Título Académico *
               </label>
               <input
                 type="text"
@@ -258,21 +421,6 @@ export default function MyProfileEditorPage() {
                   handleFieldChange('careerTitle', e.target.value)
                 }
                 placeholder="Ej. Ingeniería en Informática / Diseño Industrial"
-                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-theme-primary">
-                Track Académico / Línea de Laboratorio CITT
-              </label>
-              <input
-                type="text"
-                value={formState.academicTrack || ''}
-                onChange={(e) =>
-                  handleFieldChange('academicTrack', e.target.value)
-                }
-                placeholder="Ej. Track Robótica Autónoma, Ciberseguridad CTF o Arquitectura Cloud"
                 className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
               />
             </div>
@@ -290,28 +438,26 @@ export default function MyProfileEditorPage() {
               />
             </div>
 
+            {/* Read-Only Role Field (Security Hardened) */}
             <div>
               <label className="block text-xs font-bold text-theme-primary">
-                Rol en CITT Connect
+                Rol Oficial CITT (Gobernado por Correo Institucional)
               </label>
-              <select
-                value={formState.role}
-                onChange={(e) =>
-                  handleFieldChange('role', e.target.value as CittRole)
-                }
-                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
-              >
-                {(Object.keys(ROLE_CONFIG) as CittRole[]).map((roleKey) => (
-                  <option key={roleKey} value={roleKey}>
-                    {ROLE_CONFIG[roleKey].label}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-1.5 flex items-center justify-between rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5">
+                <RoleBadge role={formState.role} size="md" />
+                <span className="text-xs font-bold text-theme-secondary">
+                  {ROLE_CONFIG[formState.role].shortLabel}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-theme-secondary">
+                Tu rol está gobernado por tu credencial institucional Duoc UC. Para solicitar cambios, contacta a tu Coordinador CITT.
+              </p>
             </div>
 
+            {/* Campus Selector (18 Official Campuses) */}
             <div>
               <label className="block text-xs font-bold text-theme-primary">
-                Sede CITT Duoc UC
+                Sede CITT Duoc UC (18 Sedes Oficiales)
               </label>
               <select
                 value={formState.campusSlug}
@@ -322,15 +468,16 @@ export default function MyProfileEditorPage() {
               >
                 {CITT_CAMPUSES.map((campus) => (
                   <option key={campus.slug} value={campus.slug}>
-                    {campus.name}
+                    {campus.name} ({campus.region})
                   </option>
                 ))}
               </select>
             </div>
 
+            {/* School Selector */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-theme-primary">
-                Escuela Oficial Duoc UC (Define el color de tu insignia)
+                Escuela Oficial Duoc UC (Color de Insignia Institucional)
               </label>
               <select
                 value={formState.schoolSlug}
@@ -415,7 +562,7 @@ export default function MyProfileEditorPage() {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {formState.specialties.map((spec) => (
+              {(formState.specialties || []).map((spec) => (
                 <span
                   key={spec}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-theme-elevated px-2.5 py-1 text-xs font-medium text-theme-primary"
@@ -434,18 +581,82 @@ export default function MyProfileEditorPage() {
             </div>
           </div>
 
-          {/* LinkedIn y Redes Sociales */}
+          {/* Hitos Académicos & Logros (Achievements) */}
+          <div className="border-t border-theme pt-5">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-theme-primary">
+              <Award className="h-4 w-4 text-[#FFB800]" />
+              <span>Hitos y Reconocimientos Destacados</span>
+            </h2>
+            <div className="mt-2 flex gap-2">
+              <input
+                type="text"
+                value={newAchievement}
+                onChange={(e) => setNewAchievement(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddAchievement();
+                  }
+                }}
+                placeholder="Ej. 1er Lugar Hackathon Nacional CITT 2025..."
+                className="flex-1 rounded-xl border border-theme bg-theme-elevated px-3.5 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleAddAchievement}
+                className="inline-flex items-center gap-1 rounded-xl bg-theme-subtle px-3.5 py-2 text-xs font-bold text-theme-primary hover:bg-[#FFB800] hover:text-[#1A1A1A]"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Agregar</span>
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-1.5">
+              {(formState.achievements || []).map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between rounded-xl bg-theme-elevated px-3 py-2 text-xs text-theme-primary"
+                >
+                  <span className="truncate">{item}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAchievement(idx)}
+                    className="ml-2 text-theme-secondary hover:text-red-500"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Contacto & Redes Sociales */}
           <div className="border-t border-theme pt-5">
             <h2 className="text-sm font-bold text-theme-primary">
-              Perfil de LinkedIn y Redes Sociales
+              Perfil Profesional y Redes Sociales
             </h2>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs text-theme-secondary">
+                  Teléfono Móvil (Para exportación vCard .vcf)
+                </label>
+                <input
+                  type="tel"
+                  value={formState.phoneOptional || ''}
+                  onChange={(e) =>
+                    handleFieldChange('phoneOptional', e.target.value)
+                  }
+                  placeholder="+56 9 1234 5678"
+                  className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs text-theme-secondary">
                   URL de LinkedIn
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={formState.linkedinUrl || ''}
                   onChange={(e) =>
                     handleFieldChange('linkedinUrl', e.target.value)
@@ -460,7 +671,7 @@ export default function MyProfileEditorPage() {
                   URL de GitHub
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={formState.githubUrl || ''}
                   onChange={(e) =>
                     handleFieldChange('githubUrl', e.target.value)
@@ -475,7 +686,7 @@ export default function MyProfileEditorPage() {
                   Portafolio o Sitio Web
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={formState.portfolioUrl || ''}
                   onChange={(e) =>
                     handleFieldChange('portfolioUrl', e.target.value)
@@ -485,12 +696,12 @@ export default function MyProfileEditorPage() {
                 />
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs text-theme-secondary">
                   Instagram u Otra Red Social
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={formState.instagramUrl || ''}
                   onChange={(e) =>
                     handleFieldChange('instagramUrl', e.target.value)
@@ -502,6 +713,7 @@ export default function MyProfileEditorPage() {
             </div>
           </div>
 
+          {/* Submit Action */}
           <div className="flex items-center justify-between border-t border-theme pt-5">
             {savedNotice ? (
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#43B02A]">
@@ -510,7 +722,7 @@ export default function MyProfileEditorPage() {
               </span>
             ) : (
               <span className="text-xs text-theme-secondary">
-                Los cambios se reflejan al instante en tu credencial pública.
+                Los cambios se reflejan al instante en tu credencial y proyectos.
               </span>
             )}
 

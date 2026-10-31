@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import mermaid from 'mermaid';
 import { useCittNetwork } from '@/context/CittNetworkContext';
 
 interface MermaidChartProps {
@@ -19,6 +18,7 @@ export function MermaidChart({ chart }: MermaidChartProps) {
     const renderChart = async () => {
       try {
         setHasError(false);
+        const mermaid = (await import('mermaid')).default;
         const uniqueId = `mermaid-${Math.random()
           .toString(36)
           .substring(2, 9)}`;
