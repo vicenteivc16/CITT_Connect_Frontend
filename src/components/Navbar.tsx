@@ -85,6 +85,11 @@ export function Navbar() {
 
   const isHome = pathname === '/';
   const isTransparentTop = isHome && !isScrolled;
+  const isPrivileged =
+    isAuthenticated &&
+    (activeUser.role === 'dev' ||
+      activeUser.role === 'personal_duoc' ||
+      activeUser.role === 'lider_citt');
 
   return (
     <>
@@ -288,6 +293,17 @@ export function Navbar() {
                   </Dialog.Portal>
                 </Dialog.Root>
 
+                {/* Acceso Directo al Panel Interno para Roles con Privilegios */}
+                {isPrivileged && (
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-[#307FE2]/40 bg-[#307FE2]/10 px-3 py-2 text-xs font-bold text-[#307FE2] shadow-sm transition hover:bg-[#307FE2] hover:text-white"
+                  >
+                    <Shield className="h-4 w-4 shrink-0" />
+                    <span className="hidden md:inline">Panel Interno</span>
+                  </Link>
+                )}
+
                 {/* Usuario Activo & Simulador de Rol */}
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
@@ -365,6 +381,23 @@ export function Navbar() {
                             <span className="text-[11px] text-[#307FE2] font-black">↗</span>
                           </Link>
                         </DropdownMenu.Item>
+
+                        {isPrivileged && (
+                          <DropdownMenu.Item asChild>
+                            <Link
+                              href="/admin"
+                              className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-[#307FE2]/30 bg-[#307FE2]/10 px-3 py-2 text-xs font-bold text-[#307FE2] transition hover:bg-[#307FE2] hover:text-white"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Shield className="h-3.5 w-3.5" />
+                                <span>Panel Interno CITT</span>
+                              </div>
+                              <span className="rounded-full bg-[#FFB800] px-1.5 py-0.5 text-[9px] font-black text-[#1A1A1A]">
+                                ADMIN
+                              </span>
+                            </Link>
+                          </DropdownMenu.Item>
+                        )}
                       </div>
 
                       {/* Simulador Rápido de Roles (Herramienta Institucional CITT) */}
@@ -462,6 +495,20 @@ export function Navbar() {
             </Link>
           );
         })}
+
+        {isPrivileged && (
+          <Link
+            href="/admin"
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+              pathname.startsWith('/admin')
+                ? 'border-[#307FE2] bg-[#307FE2] text-white shadow-sm'
+                : 'border-[#307FE2]/40 bg-[#307FE2]/10 text-[#307FE2]'
+            }`}
+          >
+            <Shield className="h-3.5 w-3.5" />
+            <span>Admin CITT</span>
+          </Link>
+        )}
       </div>
     </header>
     {!isHome && <div className="h-[116px] xl:h-[74px]" aria-hidden="true" />}
