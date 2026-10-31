@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -37,8 +37,10 @@ import {
   executeCittLogin,
   executeCittRegister,
   inspectEmailDomain,
+  signInWithMicrosoftDuoc,
   validatePartnerInviteCode,
 } from '@/lib/auth';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase/client';
 import { RoleBadge } from '@/components/RoleBadge';
 import { CittMemberProfile, CittRole, DuocSchoolSlug } from '@/types/citt';
 
@@ -156,6 +158,104 @@ export default function AccesoPage() {
   // Inspección reactiva del dominio mientras se escribe en registro
   const domainInfo = inspectEmailDomain(regEmail);
 
+  // Listener de autenticación OAuth (Microsoft 365)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (
+        session?.user &&
+        (event === 'SIGNED_IN' || event === 'USER_UPDATED')
+      ) {
+        const email = session.user.email || '';
+        const domainCheck = inspectEmailDomain(email);
+
+        if (
+          domainCheck.type === 'invalid' ||
+          (domainCheck.type === 'external' &&
+            !session.user.user_metadata?.invite_code)
+        ) {
+          setStatusMessage({
+            type: 'error',
+            text: `Acceso restringido: La cuenta ${email} no pertenece a los dominios oficiales de Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl).`,
+          });
+          await supabase.auth.signOut();
+          return;
+        }
+
+        const effectiveRole = domainCheck.assignedRole || 'usuario_citt';
+        const effectiveUser =
+          session.user.user_metadata?.username ||
+          email.split('@')[0].toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+
+        const newProfile: CittMemberProfile = {
+          id: `usr-${session.user.id.slice(0, 8)}`,
+          username: effectiveUser,
+          fullName: session.user.user_metadata?.full_name || email.split('@')[0],
+          email,
+          careerTitle:
+            effectiveRole === 'personal_duoc'
+              ? 'Docente / Funcionario Duoc UC'
+              : 'Estudiante CITT Duoc UC',
+          currentOccupation:
+            effectiveRole === 'personal_duoc'
+              ? 'Personal Duoc UC'
+              : 'Estudiante Duoc UC',
+          specialties: ['Innovación', 'Transferencia Tecnológica'],
+          bio: 'Perfil verificado institucionalmente con Microsoft 365 Duoc UC.',
+          role: effectiveRole,
+          campusSlug: session.user.user_metadata?.campus_slug || 'san-joaquin',
+          schoolSlug: session.user.user_metadata?.school_slug || 'informatica',
+          avatarUrl: '/assets/citt-logo.webp',
+          bannerUrl: '/assets/citt-hero-lobby.webp',
+          isOpenToCollaborate: true,
+          isVerified: true,
+        };
+
+        registerMember(newProfile);
+        setActiveUserByUsername(effectiveUser);
+
+        setStatusMessage({
+          type: 'success',
+          text: `¡Autenticación con Microsoft 365 Duoc UC exitosa! Bienvenido @${effectiveUser}.`,
+        });
+
+        setTimeout(() => {
+          router.push(`/u/${effectiveUser}`);
+        }, 800);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [registerMember, setActiveUserByUsername, router]);
+
+  // Manejar Login con Microsoft
+  const handleMicrosoftAuth = async () => {
+    setIsLoading(true);
+    setStatusMessage(null);
+    try {
+      const res = await signInWithMicrosoftDuoc();
+      if (res.url) {
+        window.location.href = res.url;
+        return;
+      }
+      setStatusMessage({
+        type: 'info',
+        text: 'Para ingresar con Microsoft 365 Duoc UC, ingresa tu correo institucional (@duocuc.cl o @profesor.duoc.cl) en el formulario para validar tu identidad institucional.',
+      });
+    } catch {
+      setStatusMessage({
+        type: 'error',
+        text: 'No fue posible conectar con el servicio de Microsoft Auth.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Acceso Rápido por Rol
   const handleQuickRoleSelect = (item: QuickRoleAccessItem) => {
     setIsLoading(true);
@@ -253,6 +353,15 @@ export default function AccesoPage() {
       setStatusMessage({
         type: 'error',
         text: 'Por favor, completa tu nombre completo, correo institucional y carrera.',
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (domainInfo.type === 'external' && !regInviteCode.trim()) {
+      setStatusMessage({
+        type: 'error',
+        text: 'Acceso restringido: Solo se permiten correos institucionales Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl). No puedes crear una cuenta con un correo externo sin un Código de Invitación Partner válido emitido por CITT.',
       });
       setIsLoading(false);
       return;
@@ -691,103 +800,172 @@ export default function AccesoPage() {
 
               {/* TAB 1: FORMULARIO DE INICIO DE SESIÓN */}
               {activeTab === 'login' && (
-                <form onSubmit={handleLoginSubmit} className="mt-6 space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-theme-primary">
-                      Correo Institucional o Usuario *
-                    </label>
-                    <div className="relative mt-1">
-                      <Mail className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-theme-secondary" />
-                      <input
-                        type="text"
-                        required
-                        value={loginEmailOrUser}
-                        onChange={(e) => setLoginEmailOrUser(e.target.value)}
-                        placeholder="tu.nombre@duocuc.cl o usuario"
-                        className="w-full rounded-xl border border-theme bg-theme-subtle py-2.5 pr-3.5 pl-10 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                      />
-                    </div>
-                  </div>
+                <div className="mt-6 space-y-4">
+                  {/* Botón Oficial Microsoft 365 Duoc UC */}
+                  <button
+                    type="button"
+                    onClick={handleMicrosoftAuth}
+                    disabled={isLoading}
+                    className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-theme bg-theme-subtle py-3 px-4 text-xs font-bold text-theme-primary shadow-sm transition hover:bg-theme-surface hover:border-[#FFB800] active:scale-[0.99]"
+                  >
+                    <svg className="h-4 w-4 shrink-0" viewBox="0 0 21 21">
+                      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+                      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+                      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+                    </svg>
+                    <span>Continuar con Cuenta Institucional Duoc UC (Microsoft 365)</span>
+                  </button>
 
-                  <div>
-                    <label className="block text-xs font-bold text-theme-primary">
-                      Contraseña *
-                    </label>
-                    <div className="relative mt-1">
-                      <Lock className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-theme-secondary" />
-                      <input
-                        type="password"
-                        required
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full rounded-xl border border-theme bg-theme-subtle py-2.5 pr-3.5 pl-10 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 text-xs">
-                    <span className="text-theme-secondary">
-                      ¿Olvidaste tu contraseña? Contacta a tu coordinador CITT.
+                  <div className="relative my-2 flex items-center justify-center">
+                    <div className="w-full border-t border-theme" />
+                    <span className="absolute bg-theme-surface px-3 text-[10px] font-bold text-theme-secondary uppercase tracking-wider">
+                      o con credenciales CITT
                     </span>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFB800] py-3 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
-                  >
-                    <span>{isLoading ? 'Autenticando...' : 'Entrar a CITT Connect'}</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </form>
+                  <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-theme-primary">
+                        Correo Institucional o Usuario *
+                      </label>
+                      <div className="relative mt-1">
+                        <Mail className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-theme-secondary" />
+                        <input
+                          type="text"
+                          required
+                          value={loginEmailOrUser}
+                          onChange={(e) => setLoginEmailOrUser(e.target.value)}
+                          placeholder="tu.nombre@duocuc.cl o usuario"
+                          className="w-full rounded-xl border border-theme bg-theme-subtle py-2.5 pr-3.5 pl-10 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-theme-primary">
+                        Contraseña *
+                      </label>
+                      <div className="relative mt-1">
+                        <Lock className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-theme-secondary" />
+                        <input
+                          type="password"
+                          required
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full rounded-xl border border-theme bg-theme-subtle py-2.5 pr-3.5 pl-10 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 text-xs">
+                      <span className="text-theme-secondary">
+                        ¿Olvidaste tu contraseña? Contacta a tu coordinador CITT.
+                      </span>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFB800] py-3 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
+                    >
+                      <span>{isLoading ? 'Autenticando...' : 'Entrar a CITT Connect'}</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </form>
+                </div>
               )}
 
               {/* TAB 2: FORMULARIO DE REGISTRO */}
               {activeTab === 'register' && (
-                <form onSubmit={handleRegisterSubmit} className="mt-6 space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-theme-primary">
-                      Nombre Completo *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={regFullName}
-                      onChange={(e) => setRegFullName(e.target.value)}
-                      placeholder="Ej. Valentina Soto Miranda"
-                      className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                    />
+                <div className="mt-6 space-y-4">
+                  {/* Botón Oficial Microsoft 365 Duoc UC */}
+                  <button
+                    type="button"
+                    onClick={handleMicrosoftAuth}
+                    disabled={isLoading}
+                    className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-theme bg-theme-subtle py-3 px-4 text-xs font-bold text-theme-primary shadow-sm transition hover:bg-theme-surface hover:border-[#FFB800] active:scale-[0.99]"
+                  >
+                    <svg className="h-4 w-4 shrink-0" viewBox="0 0 21 21">
+                      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+                      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+                      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+                    </svg>
+                    <span>Verificar Identidad con Microsoft 365 Duoc UC</span>
+                  </button>
+
+                  <div className="relative my-2 flex items-center justify-center">
+                    <div className="w-full border-t border-theme" />
+                    <span className="absolute bg-theme-surface px-3 text-[10px] font-bold text-theme-secondary uppercase tracking-wider">
+                      o registro manual institucional
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-theme-primary">
-                      Correo Electrónico *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="nombre@duocuc.cl o correo corporativo"
-                      className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                    />
+                  <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-theme-primary">
+                        Nombre Completo *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={regFullName}
+                        onChange={(e) => setRegFullName(e.target.value)}
+                        placeholder="Ej. Valentina Soto Miranda"
+                        className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                      />
+                    </div>
 
-                    {/* Validación Reactiva del Dominio */}
-                    {regEmail && (
-                      <div className="mt-2 rounded-xl border border-theme bg-theme-subtle p-2.5 text-xs">
-                        <span
-                          style={{ color: domainInfo.badgeColor }}
-                          className="font-bold"
-                        >
-                          {domainInfo.badgeLabel}
-                        </span>
-                        <p className="text-[11px] text-theme-secondary mt-0.5">
-                          {domainInfo.description}
+                    <div>
+                      <label className="block text-xs font-bold text-theme-primary">
+                        Correo Electrónico Institucional *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        placeholder="nombre@duocuc.cl o @profesor.duoc.cl"
+                        className="mt-1 w-full rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5 text-xs font-medium text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                      />
+
+                      {/* Validación Reactiva del Dominio */}
+                      {regEmail && (
+                        <div className="mt-2 rounded-xl border border-theme bg-theme-subtle p-2.5 text-xs">
+                          <span
+                            style={{ color: domainInfo.badgeColor }}
+                            className="font-bold"
+                          >
+                            {domainInfo.badgeLabel}
+                          </span>
+                          <p className="text-[11px] text-theme-secondary mt-0.5">
+                            {domainInfo.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Campo de Código de Invitación para dominios externos */}
+                    {domainInfo.requiresPartnerInvite && (
+                      <div className="space-y-2 rounded-2xl border border-[#E87722]/30 bg-[#E87722]/10 p-3.5">
+                        <label className="block text-xs font-bold text-theme-primary">
+                          Código de Invitación Partner Corporativo *
+                        </label>
+                        <p className="text-[11px] text-theme-secondary leading-relaxed">
+                          ⚠️ Al usar un correo no Duoc UC, es obligatorio ingresar un código de invitación oficial emitido por CITT o un Docente Duoc UC (ej. AWS-INNOVA-2026).
                         </p>
+                        <input
+                          type="text"
+                          required
+                          value={regInviteCode}
+                          onChange={(e) => setRegInviteCode(e.target.value)}
+                          placeholder="Ej. AWS-INNOVA-2026 o CITT-PARTNER-2026"
+                          className="w-full rounded-xl border border-theme bg-theme-surface px-3.5 py-2 text-xs font-medium uppercase text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                        />
                       </div>
                     )}
-                  </div>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
@@ -864,7 +1042,8 @@ export default function AccesoPage() {
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </form>
-              )}
+              </div>
+            )}
 
               {/* TAB 3: VALIDACIÓN CÓDIGO PARTNER */}
               {activeTab === 'partner-invite' && (

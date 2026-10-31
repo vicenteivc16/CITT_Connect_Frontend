@@ -97,7 +97,11 @@ export function inspectEmailDomain(email: string): DomainInspectionResult {
     };
   }
 
-  if (domain === 'profesor.duocuc.cl') {
+  if (
+    domain === 'profesor.duocuc.cl' ||
+    domain === 'profesor.duoc.cl' ||
+    domain === 'duoc.cl'
+  ) {
     return {
       domain,
       type: 'faculty',
@@ -126,9 +130,9 @@ export function inspectEmailDomain(email: string): DomainInspectionResult {
     domain,
     type: 'external',
     assignedRole: null,
-    badgeLabel: '⚠ Dominio externo — Requiere Invitación Partner',
+    badgeLabel: '⚠ Dominio externo no institucional — Requiere Invitación Partner',
     badgeColor: '#E87722',
-    description: 'Los correos fuera de Duoc UC requieren un Código de Invitación válido de una empresa aliada.',
+    description: 'Solo se permiten correos oficiales Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl). Los correos externos requieren un Código de Invitación Partner válido.',
     requiresPartnerInvite: true,
   };
 }
@@ -188,6 +192,53 @@ export interface AuthActionResult {
 }
 
 /**
+ * Inicia el flujo de autenticación institucional de Microsoft 365 / Azure AD
+ */
+export async function signInWithMicrosoftDuoc(): Promise<{
+  success: boolean;
+  message: string;
+  url?: string;
+}> {
+  if (isSupabaseConfigured && typeof window !== 'undefined') {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          scopes: 'email profile offline_access openid',
+          redirectTo: `${window.location.origin}/acceso`,
+        },
+      });
+
+      if (error) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+
+      if (data?.url) {
+        return {
+          success: true,
+          message: 'Redirigiendo a Microsoft Entra ID (Duoc UC)...',
+          url: data.url,
+        };
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al conectar con Microsoft Auth.';
+      return {
+        success: false,
+        message: msg,
+      };
+    }
+  }
+
+  return {
+    success: true,
+    message: 'Portal Microsoft Auth Duoc UC listo para autenticar cuenta institucional.',
+  };
+}
+
+/**
  * Registro de nuevo integrante con validación estricta de dominios institucionales
  */
 export async function executeCittRegister(
@@ -205,19 +256,19 @@ export async function executeCittRegister(
     finalRole = 'dev';
   } else if (domainInfo.type === 'external') {
     // Exigir código de invitación
-    if (!payload.inviteCode) {
+    if (!payload.inviteCode || !payload.inviteCode.trim()) {
       return {
         success: false,
         message:
-          'Acceso denegado: Los correos fuera de Duoc UC requieren un Código de Invitación Partner válido emitido por CITT o Docente.',
+          'Acceso denegado: Solo se permiten correos institucionales de Duoc UC (@duocuc.cl, @profesor.duoc.cl, @duoc.cl). No puedes crear cuenta con un correo externo a menos que cuentes con un Código de Invitación Partner válido.',
       };
     }
 
-    const inviteValidation = validatePartnerInviteCode(payload.inviteCode);
+    const inviteValidation = validatePartnerInviteCode(payload.inviteCode.trim());
     if (!inviteValidation.valid) {
       return {
         success: false,
-        message: inviteValidation.error || 'Código de invitación inválido.',
+        message: inviteValidation.error || 'Código de invitación partner inválido o expirado.',
       };
     }
 
@@ -225,7 +276,7 @@ export async function executeCittRegister(
   } else {
     return {
       success: false,
-      message: 'Ingresa un correo electrónico con formato válido.',
+      message: 'Ingresa un correo electrónico con formato institucional válido (@duocuc.cl, @profesor.duoc.cl).',
     };
   }
 
