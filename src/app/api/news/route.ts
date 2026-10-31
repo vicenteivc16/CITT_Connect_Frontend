@@ -133,7 +133,7 @@ El proyecto integra sensores ambientales LoRaWAN y algoritmos de control predict
     sourceName: 'Boletín de Energía & Minería',
     author: 'Carlos Vega',
     authorTitle: 'Coordinador de I+D Energética',
-    imageUrl: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=1200&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=1200&q=80',
     publishedAt: '2026-10-31T07:00:00Z',
     readingTime: '4 min',
     isHeroFeatured: true,
@@ -173,7 +173,7 @@ El proyecto ya cuenta con el interés de viñas chilenas exportadoras que buscan
     sourceName: 'Revista Diseño Sustentable CL',
     author: 'Valentina Soto Miranda',
     authorTitle: 'Diseñadora Industrial & Consejera',
-    imageUrl: 'https://images.unsplash.com/photo-1581291518655-9523c932deda?auto=format&fit=crop&w=1200&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?auto=format&fit=crop&w=1200&q=80',
     publishedAt: '2026-10-31T06:15:00Z',
     readingTime: '3 min',
     isHeroFeatured: true,
@@ -257,7 +257,7 @@ El edificio piloto, ensamblado en tiempo récord de 14 días sin generación de 
     sourceName: 'Plataforma Construcción Chile',
     author: 'Guillermo Aránguiz',
     authorTitle: 'Ingeniero Constructor & Docente BIM',
-    imageUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb1861564?auto=format&fit=crop&w=1200&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80',
     publishedAt: '2026-10-31T07:30:00Z',
     readingTime: '3 min',
     isHeroFeatured: true,
@@ -331,46 +331,58 @@ Los excursionistas registran su paso acercando su teléfono o credencial CITT, a
   },
 ];
 
-// Intenta consultar feeds en vivo en español si hay conectividad
+// Intenta consultar feeds en vivo estrictamente en español
 async function fetchLiveNewsFromFeeds(): Promise<NewsItem[]> {
   const liveItems: NewsItem[] = [];
 
   try {
-    // 1. Fetch de Dev.to en español/latam (tag: ai, cloud, webdev)
+    // Fetch de Dev.to con tag exclusivo en español
     const devtoRes = await fetch(
-      'https://dev.to/api/articles?tag=ai&per_page=5',
+      'https://dev.to/api/articles?tag=espanol&per_page=6',
       { next: { revalidate: 3600 } }
     );
 
     if (devtoRes.ok) {
       const articles = await devtoRes.json();
       for (const a of articles) {
-        if (!a.title || !isCleanContent(a.title + ' ' + (a.description || '')))
-          continue;
+        if (!a.title) continue;
+        
+        // Verificación estricta de idioma español (language === 'es' o presencia de palabras clave en español)
+        const isSpanishLang = a.language === 'es' || /\b(el|la|los|las|de|en|un|una|por|para|con|del|al)\b/i.test(a.title);
+        if (!isSpanishLang) continue;
+
+        // Verificación de neutralidad estricta institucional
+        const combined = `${a.title} ${a.description || ''} ${(a.tag_list || []).join(' ')}`;
+        if (!isCleanContent(combined)) continue;
 
         liveItems.push({
           id: `devto-${a.id}`,
           title: a.title,
-          subtitle: a.description || 'Avance tecnológico en desarrollo y computación aplicada.',
-          content: a.readable_publish_date ? `${a.description}\n\nPublicado originalmente por ${a.user?.name} en la red global de desarrolladores.` : a.description,
+          subtitle: a.description || 'Avance en ciencia, desarrollo y tecnologías emergentes.',
+          content: a.readable_publish_date
+            ? `${a.description || a.title}\n\nArtículo publicado en la red internacional de tecnología por ${a.user?.name || 'Desarrollador Certificado'}.`
+            : a.description || a.title,
           schoolSlug: 'informatica',
           schoolName: 'Informática y Telecomunicaciones',
           region: 'internacional',
-          regionLabel: '🌎 Internacional · Desarrollo & IA',
-          sourceName: 'Dev.to Global Tech',
+          regionLabel: '🌎 Internacional · Tech en Español',
+          sourceName: 'Dev.to Comunidad Hispana',
           sourceUrl: a.url,
-          author: a.user?.name || 'Comunidad Dev',
+          author: a.user?.name || 'Comunidad Tecnológica',
           authorTitle: 'Ingeniero de Software & Contribuidor',
-          imageUrl: a.cover_image || a.social_image || 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
+          imageUrl:
+            a.cover_image ||
+            a.social_image ||
+            'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
           publishedAt: a.published_at || new Date().toISOString(),
           readingTime: `${a.reading_time_minutes || 3} min`,
           isHeroFeatured: false,
-          tags: a.tag_list || ['Tecnología', 'Desarrollo'],
+          tags: (a.tag_list || ['Tecnología', 'Desarrollo']).slice(0, 4),
         });
       }
     }
   } catch (err) {
-    console.warn('Aviso: Feed externo no disponible, usando banco editorial curado.', err);
+    console.warn('Aviso: Feed externo no disponible, usando banco editorial curado en español.', err);
   }
 
   return liveItems;

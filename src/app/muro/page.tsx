@@ -43,6 +43,7 @@ import {
 import { RoleBadge } from '@/components/RoleBadge';
 import { CittFeedPost, DuocSchoolSlug } from '@/types/citt';
 import { NewsItem } from '@/app/api/news/route';
+import { SedeWeatherItem } from '@/app/api/weather/route';
 
 type FilterDesk = 'todas' | 'chile' | 'internacional' | DuocSchoolSlug | 'comunidad';
 
@@ -52,6 +53,10 @@ export default function NationalGazettePage() {
   // News API State
   const [newsArticles, setNewsArticles] = useState<NewsItem[]>([]);
   const [isLoadingNews, setIsLoadingNews] = useState(true);
+
+  // Weather API State (18 Duoc UC Sedes)
+  const [sedeWeathers, setSedeWeathers] = useState<SedeWeatherItem[]>([]);
+  const [isLoadingWeather, setIsLoadingWeather] = useState(true);
 
   // Filter State
   const [activeDesk, setActiveDesk] = useState<FilterDesk>('todas');
@@ -78,7 +83,7 @@ export default function NationalGazettePage() {
   const [postCampus, setPostCampus] = useState('san-joaquin');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Fetch news from /api/news
+  // Fetch news from /api/news (100% en español)
   useEffect(() => {
     let isMounted = true;
     async function loadNews() {
@@ -98,6 +103,31 @@ export default function NationalGazettePage() {
       }
     }
     loadNews();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Fetch live weather from /api/weather (Open-Meteo para las 18 sedes Duoc UC)
+  useEffect(() => {
+    let isMounted = true;
+    async function loadWeather() {
+      try {
+        setIsLoadingWeather(true);
+        const res = await fetch('/api/weather');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.sedes) {
+            setSedeWeathers(data.sedes);
+          }
+        }
+      } catch (err) {
+        console.warn('Error al cargar clima de /api/weather:', err);
+      } finally {
+        if (isMounted) setIsLoadingWeather(false);
+      }
+    }
+    loadWeather();
     return () => {
       isMounted = false;
     };
@@ -211,20 +241,81 @@ export default function NationalGazettePage() {
   };
 
   return (
-    <div className="min-h-screen bg-theme-canvas pt-20 pb-20 text-theme-primary transition-colors duration-200">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="min-h-screen bg-theme-canvas pt-16 pb-20 text-theme-primary transition-colors duration-200">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
         {/* ========================================================= */}
-        {/* 1. MASTHEAD ESTILO WASHINGTON POST · GRAN PRENSA DUOC UC   */}
+        {/* 0. BANNER SUPERIOR DEL CLIMA: 18 SEDES DUOC UC SCROLL DERECHA */}
         {/* ========================================================= */}
-        <header className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card text-center space-y-4">
-          {/* Fila Superior: Fechador Chileno, Telemetría y Botón de Publicación */}
+        <section
+          aria-label="Clima en vivo sedes Duoc UC"
+          className="rounded-2xl border border-theme bg-theme-surface shadow-theme-card overflow-hidden flex flex-col sm:flex-row items-stretch"
+        >
+          {/* Badge Fijo Sede Meteorología */}
+          <div className="shrink-0 flex items-center gap-2 bg-[#1A1A1A] text-white px-4 py-2.5 text-[11px] font-black uppercase tracking-wider border-b sm:border-b-0 sm:border-r border-theme z-10 shadow-sm">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#43B02A] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#43B02A]" />
+            </span>
+            <span className="text-[#FFB800]">CLIMA SEDES HOY</span>
+            <span className="hidden md:inline text-white/50">| 18 Sedes</span>
+          </div>
+
+          {/* Carril de Marquesina que se desplaza hacia la DERECHA */}
+          <div className="relative overflow-hidden whitespace-nowrap flex-1 py-2 bg-theme-subtle/50">
+            <div className="animate-ticker-right flex items-center">
+              {/* Primer set de sedes */}
+              {sedeWeathers.map((sede) => (
+                <div
+                  key={`weather-1-${sede.slug}`}
+                  className="inline-flex items-center gap-2 px-4 border-r border-theme/40 text-xs font-semibold text-theme-primary"
+                >
+                  <span className="font-bold text-theme-secondary text-[11px]">
+                    📍 {sede.cityName} ({sede.campusName.replace('Sede ', '')})
+                  </span>
+                  <span className="text-base">{sede.conditionEmoji}</span>
+                  <span className="font-black text-theme-primary">{sede.temp}</span>
+                  <span className="text-[10px] text-theme-secondary/80 hidden lg:inline">
+                    · {sede.conditionText}
+                  </span>
+                  <span className="text-[#FFB800] text-[10px]">●</span>
+                </div>
+              ))}
+
+              {/* Segundo set duplicado para scroll infinito continuo hacia la derecha */}
+              {sedeWeathers.map((sede) => (
+                <div
+                  key={`weather-2-${sede.slug}`}
+                  className="inline-flex items-center gap-2 px-4 border-r border-theme/40 text-xs font-semibold text-theme-primary"
+                >
+                  <span className="font-bold text-theme-secondary text-[11px]">
+                    📍 {sede.cityName} ({sede.campusName.replace('Sede ', '')})
+                  </span>
+                  <span className="text-base">{sede.conditionEmoji}</span>
+                  <span className="font-black text-theme-primary">{sede.temp}</span>
+                  <span className="text-[10px] text-theme-secondary/80 hidden lg:inline">
+                    · {sede.conditionText}
+                  </span>
+                  <span className="text-[#FFB800] text-[10px]">●</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================= */}
+        {/* 1. MASTHEAD DISRUPTIVO & LIBRE · EL DIARIO CITT DUOC UC   */}
+        {/* ========================================================= */}
+        <header className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card text-center space-y-5">
+          {/* Fila Superior: Fechador Oficial, Telemetría y Botón de Despacho */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-theme pb-4 text-xs font-semibold text-theme-secondary">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
               <span className="font-bold text-theme-primary">
                 Sábado, 31 de Octubre de 2026
               </span>
               <span>·</span>
               <span>Edición Nacional Nº 1,428</span>
+              <span>·</span>
+              <span>Depósito Legal CITT-2026-CL</span>
               <span>·</span>
               <span className="rounded-full bg-[#107C41]/15 px-2.5 py-0.5 text-[11px] font-bold text-[#107C41]">
                 ● 18 Sedes Conectadas
@@ -232,13 +323,13 @@ export default function NationalGazettePage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="hidden md:inline-block text-[11px] text-theme-secondary/80">
-                SGO 22°C · CCP 19°C · VÑA 18°C · PMC 15°C
+              <span className="hidden lg:inline-block text-[11px] text-theme-secondary/80">
+                Información 100% en Español
               </span>
               <button
                 type="button"
                 onClick={() => setComposeModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FFB800] px-3.5 py-1.5 text-xs font-bold text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633]"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FFB800] px-3.5 py-1.5 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633] active:scale-95"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Redactar Despacho / Noticia</span>
@@ -246,37 +337,77 @@ export default function NationalGazettePage() {
             </div>
           </div>
 
-          {/* Gran Título Masthead con Logo Duoc UC Prominente */}
-          <div className="py-4 space-y-3">
-            <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
-              {/* Logo Oficial Duoc UC en Alta Resolución */}
-              <div className="flex items-center gap-3">
+          {/* Gran Cabecera Artística & Disruptiva con Letra Monumental "E" */}
+          <div className="py-2 space-y-4">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6 px-2 sm:px-6">
+              {/* Bloque Izquierdo: Logo Duoc UC Oficial en Alta Resolución */}
+              <div className="flex flex-col items-center lg:items-start gap-1">
                 <img
                   src="/assets/Logo_DuocUC.svg.webp"
                   alt="Logo Oficial Duoc UC"
-                  className="h-8 sm:h-10 w-auto object-contain brightness-100 dark:brightness-110 drop-shadow-sm"
+                  className="h-9 sm:h-11 w-auto object-contain brightness-100 dark:brightness-110 drop-shadow-sm"
                 />
+                <span className="text-[10px] font-bold tracking-wider text-theme-secondary uppercase">
+                  Vicerrectoría Académica & CITT
+                </span>
               </div>
 
-              {/* Separador Broadsheet */}
-              <div className="hidden md:block h-10 w-px bg-theme" />
+              {/* Centro: Título Monumental Disruptivo con Drop-Cap y CITT Subrayado en Amarillo */}
+              <div className="flex items-center justify-center">
+                <div className="flex items-baseline">
+                  {/* Letra Inicial Gigante Monumental "E" */}
+                  <span className="font-serif text-7xl sm:text-8xl lg:text-9xl font-black text-theme-primary leading-none select-none tracking-tighter drop-shadow-sm pr-1">
+                    E
+                  </span>
 
-              {/* Título Gaceta CITT */}
-              <div className="text-center md:text-left">
-                <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-theme-primary uppercase">
-                  EL DIARIO CITT
-                </h1>
-                <p className="font-serif italic text-xs sm:text-sm text-theme-secondary">
-                  La Gaceta Oficial de Innovación Aplicada & Transferencia Tecnológica
-                </p>
+                  {/* Resto del Titular en Tipografía Broadsheet Clásica */}
+                  <div className="text-left flex flex-col justify-end">
+                    <div className="flex items-baseline flex-wrap gap-x-2">
+                      <span className="font-serif text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-theme-primary uppercase">
+                        L DIARIO
+                      </span>
+
+                      {/* CITT con Subrayado Amarillo Marcador Vibrante */}
+                      <span className="relative inline-block">
+                        <span className="font-serif text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-theme-primary uppercase px-1">
+                          CITT
+                        </span>
+                        {/* Trazo Amarillo Highlighter de Énfasis */}
+                        <span
+                          className="absolute -bottom-1 left-0 w-full h-3 sm:h-4 bg-[#FFB800] -rotate-1 rounded-sm opacity-90 -z-0"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </div>
+
+                    <p className="font-serif italic text-xs sm:text-sm text-theme-secondary mt-1">
+                      La Gran Gaceta Tecnológica y de Innovación Abierta de Duoc UC
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bloque Derecho: Sello Oficial Circular de Prensa CITT */}
+              <div className="hidden lg:flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#FFB800]/50 p-2.5 text-center">
+                <ShieldCheck className="h-6 w-6 text-[#FFB800]" />
+                <span className="text-[10px] font-black uppercase text-theme-primary tracking-wider mt-1">
+                  PRENSA DUOC UC
+                </span>
+                <span className="text-[9px] text-theme-secondary font-bold">
+                  Neutralidad Verificada
+                </span>
               </div>
             </div>
 
-            {/* Doble Línea Clásica de Prensa */}
-            <div className="border-t-2 border-b-4 border-double border-theme py-1.5">
-              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-theme-secondary">
-                Información Verificada · Neutralidad Institucional · Foco en Chile & Vanguardia Global
-              </p>
+            {/* Doble Línea Clásica de Prensa con Principios Editoriales */}
+            <div className="border-t-2 border-b-4 border-double border-theme py-2">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-1 text-[11px] font-black uppercase tracking-widest text-theme-secondary px-2">
+                <span>Información Verificada · Solo en Español</span>
+                <span className="hidden md:inline">●</span>
+                <span>Foco Prioritario en Chile & Vanguardia Global</span>
+                <span className="hidden md:inline">●</span>
+                <span>18 Sedes Conectadas en Directo</span>
+              </div>
             </div>
           </div>
 
@@ -309,7 +440,7 @@ export default function NationalGazettePage() {
         )}
 
         {/* ========================================================= */}
-        {/* 2. HERO: CARRUSEL DESTACADO DE LAS 9 ESCUELAS DE DUOC UC   */}
+        {/* 2. HERO: CARRUSEL CON MEDIDAS RÍGIDAS ESTÁTICAS (ZERO CLS) */}
         {/* ========================================================= */}
         <section
           className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card space-y-6"
@@ -381,12 +512,12 @@ export default function NationalGazettePage() {
             </div>
           </div>
 
-          {/* Gran Noticia Destacada de la Escuela Seleccionada */}
+          {/* Gran Noticia Destacada con MEDIDAS ESTÁTICAS RÍGIDAS para eliminar descuadres */}
           {currentHeroArticle && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              {/* Imagen con Caption Periodístico */}
-              <div className="lg:col-span-7 space-y-2">
-                <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-theme bg-theme-subtle group">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch h-auto lg:h-[450px]">
+              {/* Imagen con Altura Fija y Caption Periodístico */}
+              <div className="lg:col-span-7 h-full flex flex-col justify-between">
+                <div className="relative h-[340px] sm:h-[380px] lg:h-[400px] w-full overflow-hidden rounded-2xl border border-theme bg-theme-subtle group">
                   <img
                     src={currentHeroArticle.imageUrl}
                     alt={currentHeroArticle.title}
@@ -401,41 +532,51 @@ export default function NationalGazettePage() {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-theme-secondary px-1">
+                <div className="h-[24px] flex items-center justify-between text-[11px] text-theme-secondary px-1 pt-1">
                   <span>Fuente: {currentHeroArticle.sourceName}</span>
                   <span>Lectura estimada: {currentHeroArticle.readingTime}</span>
                 </div>
               </div>
 
-              {/* Contenido Editorial Washington Post */}
-              <div className="lg:col-span-5 space-y-4">
+              {/* Contenido Editorial con Altura Fija y Line Clamps Rígidos */}
+              <div className="lg:col-span-5 h-full flex flex-col justify-between py-1">
                 <div className="space-y-2">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-[#307FE2]">
-                    Reportaje Principal · Escuela de {currentHeroArticle.schoolName}
-                  </span>
-                  <h3
-                    onClick={() => setReadingArticle(currentHeroArticle)}
-                    className="font-serif text-2xl sm:text-3xl lg:text-4xl font-black leading-tight tracking-tight text-theme-primary hover:text-[#307FE2] cursor-pointer transition"
-                  >
-                    {currentHeroArticle.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm font-bold text-theme-secondary leading-relaxed">
-                    {currentHeroArticle.subtitle}
-                  </p>
+                  <div className="h-[20px] overflow-hidden">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-[#307FE2]">
+                      Reportaje Principal · Escuela de {currentHeroArticle.schoolName}
+                    </span>
+                  </div>
+
+                  <div className="h-[76px] overflow-hidden">
+                    <h3
+                      onClick={() => setReadingArticle(currentHeroArticle)}
+                      className="font-serif text-xl sm:text-2xl font-black leading-snug tracking-tight text-theme-primary hover:text-[#307FE2] cursor-pointer transition line-clamp-2"
+                    >
+                      {currentHeroArticle.title}
+                    </h3>
+                  </div>
+
+                  <div className="h-[44px] overflow-hidden">
+                    <p className="text-xs sm:text-sm font-bold text-theme-secondary leading-relaxed line-clamp-2">
+                      {currentHeroArticle.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="h-[96px] overflow-hidden">
+                    <p className="text-xs text-theme-secondary/90 leading-relaxed line-clamp-4">
+                      {currentHeroArticle.content}
+                    </p>
+                  </div>
                 </div>
 
-                <p className="text-xs text-theme-secondary/90 leading-relaxed line-clamp-4">
-                  {currentHeroArticle.content}
-                </p>
-
-                {/* Tags & Firma de Autor */}
-                <div className="border-t border-theme pt-3 space-y-3">
-                  <div className="flex items-center justify-between">
+                {/* Tags & Firma de Autor con Altura Fija */}
+                <div className="border-t border-theme pt-3 space-y-2 mt-auto">
+                  <div className="h-[44px] flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-theme-primary">
+                      <p className="text-xs font-bold text-theme-primary line-clamp-1">
                         Por {currentHeroArticle.author}
                       </p>
-                      <p className="text-[11px] text-theme-secondary">
+                      <p className="text-[11px] text-theme-secondary line-clamp-1">
                         {currentHeroArticle.authorTitle}
                       </p>
                     </div>
@@ -688,7 +829,11 @@ export default function NationalGazettePage() {
                           Sede {campus.shortName}
                         </span>
                         <span className="text-theme-secondary">
-                          {new Date(post.createdAt).toLocaleDateString('es-CL')}
+                          {post.createdAt.startsWith('Hace') || post.createdAt.includes('Ayer') || post.createdAt.includes('Hoy')
+                            ? post.createdAt
+                            : isNaN(new Date(post.createdAt).getTime())
+                            ? 'Hoy'
+                            : new Date(post.createdAt).toLocaleDateString('es-CL')}
                         </span>
                       </div>
                       <h5 className="font-serif text-xs font-bold text-theme-primary group-hover:text-[#307FE2] transition leading-snug">

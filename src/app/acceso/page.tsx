@@ -513,15 +513,17 @@ export default function AccesoPage() {
               {/* Cabecera del Panel */}
               <div className="space-y-1.5 pb-5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <img
                       src="/assets/citt-logo.webp"
                       alt="CITT Duoc UC"
                       className="h-7 w-7 object-contain"
                     />
-                    <span className="text-xs font-black uppercase tracking-wider text-[#307FE2]">
-                      Duoc UC
-                    </span>
+                    <img
+                      src="/assets/Logo_DuocUC.svg.webp"
+                      alt="Duoc UC"
+                      className="h-5 w-auto object-contain brightness-100 dark:brightness-110"
+                    />
                   </div>
                   <Link
                     href="/"

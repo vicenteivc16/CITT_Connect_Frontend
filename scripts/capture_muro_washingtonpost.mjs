@@ -28,28 +28,28 @@ async function runCapture() {
     console.log('Captura 1 guardada: 01-muro-masthead-broadsheet.png');
 
     // 2. Scroll al Hero Carrusel de Escuelas
-    const heroSection = page.locator('h2:has-text("Vanguardia Multidisciplinaria")');
-    if (await heroSection.count() > 0) {
-      await heroSection.scrollIntoViewIfNeeded();
+    const heroCard = page.locator('section:has(h2:has-text("Vanguardia Multidisciplinaria"))');
+    if (await heroCard.count() > 0) {
+      await heroCard.first().scrollIntoViewIfNeeded();
       await page.waitForTimeout(600);
+      await heroCard.first().screenshot({
+        path: path.join(OUT_DIR, '02-muro-hero-carrusel-escuelas.png'),
+      });
+      console.log('Captura 2 guardada: 02-muro-hero-carrusel-escuelas.png');
     }
-    await page.screenshot({
-      path: path.join(OUT_DIR, '02-muro-hero-carrusel-escuelas.png'),
-      fullPage: false,
-    });
-    console.log('Captura 2 guardada: 02-muro-hero-carrusel-escuelas.png');
 
-    // 3. Cambiar de Escuela en el Hero (Clic en Diseño o Salud)
+    // 3. Cambiar de Escuela en el Hero (Clic en Diseño)
     const disenoBtn = page.locator('button:has-text("Diseño")');
     if (await disenoBtn.count() > 0) {
       await disenoBtn.first().click();
       await page.waitForTimeout(700);
+      if (await heroCard.count() > 0) {
+        await heroCard.first().screenshot({
+          path: path.join(OUT_DIR, '03-muro-hero-escuela-diseno.png'),
+        });
+        console.log('Captura 3 guardada: 03-muro-hero-escuela-diseno.png');
+      }
     }
-    await page.screenshot({
-      path: path.join(OUT_DIR, '03-muro-hero-escuela-diseno.png'),
-      fullPage: false,
-    });
-    console.log('Captura 3 guardada: 03-muro-hero-escuela-diseno.png');
 
     // 4. Filtrar por "🇨🇱 Solo Chile"
     const chileFilterBtn = page.locator('button:has-text("Solo Chile")');

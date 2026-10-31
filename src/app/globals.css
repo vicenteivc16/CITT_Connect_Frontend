@@ -112,3 +112,24 @@ p {
 .animate-ticker-infinite:hover {
   animation-play-state: paused;
 }
+
+/* Banner de Clima Infinito hacia la Derecha */
+@keyframes ticker-scroll-right {
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-ticker-right {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: ticker-scroll-right 38s linear infinite;
+}
+
+.animate-ticker-right:hover {
+  animation-play-state: paused;
+}
