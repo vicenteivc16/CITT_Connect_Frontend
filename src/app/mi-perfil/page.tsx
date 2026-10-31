@@ -8,29 +8,25 @@ import {
   Award,
   Camera,
   Check,
-  Image as ImageIcon,
   LogIn,
   Plus,
   QrCode,
-  Radio,
   Save,
-  Shield,
-  Smartphone,
   Trash2,
   Upload,
-  UserCheck,
   X,
 } from 'lucide-react';
 import { useCittNetwork } from '@/context/CittNetworkContext';
 import {
-  CITT_BANNER_PRESETS,
   CITT_CAMPUSES,
   DUOC_SCHOOLS,
-  ROLE_CONFIG,
 } from '@/data/citt-catalog';
-import { CittMemberProfile, CittRole, DuocSchoolSlug } from '@/types/citt';
-import { PhygitalPassCard } from '@/components/PhygitalPassCard';
-import { RoleBadge } from '@/components/RoleBadge';
+import { CittMemberProfile, DuocSchoolSlug } from '@/types/citt';
+
+// Subcomponentes Modulares de Perfil
+import { ProfilePassLivePreview } from '@/components/perfil/ProfilePassLivePreview';
+import { ProfileBannersSelector } from '@/components/perfil/ProfileBannersSelector';
+import { ProfileSocialLinksForm } from '@/components/perfil/ProfileSocialLinksForm';
 
 function ensureHttpUrl(url?: string): string {
   if (!url) return '';
@@ -274,53 +270,10 @@ export default function MyProfileEditorPage() {
           </div>
 
           {/* Banner Selector */}
-          <div className="space-y-3">
-            <h2 className="flex items-center gap-2 text-sm font-bold text-theme-primary">
-              <ImageIcon className="h-4 w-4 text-[#FFB800]" />
-              <span>Banner de Portada Duoc UC</span>
-            </h2>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {CITT_BANNER_PRESETS.map((preset) => {
-                const isSelected = formState.bannerUrl === preset.imageUrl;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => handleFieldChange('bannerUrl', preset.imageUrl)}
-                    className={`flex flex-col items-start rounded-xl p-2 text-left text-xs transition ${
-                      isSelected
-                        ? 'bg-[#FFB800] font-bold text-[#1A1A1A]'
-                        : 'border border-theme bg-theme-elevated text-theme-primary hover:border-[#FFB800]'
-                    }`}
-                  >
-                    <span className="line-clamp-1 font-bold">
-                      {preset.category}
-                    </span>
-                    <span
-                      className={`line-clamp-1 text-xs ${
-                        isSelected ? 'text-[#1A1A1A]/80' : 'text-theme-secondary'
-                      }`}
-                    >
-                      {preset.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-theme-primary">
-                URL de Banner Personalizado (Opcional)
-              </label>
-              <input
-                type="text"
-                value={formState.bannerUrl || ''}
-                onChange={(e) => handleFieldChange('bannerUrl', e.target.value)}
-                placeholder="/assets/citt-hero-lobby.webp o https://..."
-                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
-              />
-            </div>
-          </div>
+          <ProfileBannersSelector
+            currentBannerUrl={formState.bannerUrl}
+            onSelectBanner={(url) => handleFieldChange('bannerUrl', url)}
+          />
 
           {/* Availability Switch */}
           <div className="flex items-center justify-between rounded-2xl border border-theme bg-theme-subtle p-4">
@@ -349,7 +302,7 @@ export default function MyProfileEditorPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-theme-primary">
-                Nombre Completo *
+                Nombre y Apellidos Oficiales
               </label>
               <input
                 type="text"
@@ -362,40 +315,7 @@ export default function MyProfileEditorPage() {
 
             <div>
               <label className="block text-xs font-bold text-theme-primary">
-                Username (Enlace `/u/...`) *
-              </label>
-              <input
-                type="text"
-                required
-                value={formState.username}
-                onChange={(e) =>
-                  handleFieldChange(
-                    'username',
-                    e.target.value
-                      .toLowerCase()
-                      .replace(/[^a-z0-9-_]/g, '-')
-                  )
-                }
-                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 font-mono text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-theme-primary">
-                Correo Electrónico de Contacto *
-              </label>
-              <input
-                type="email"
-                required
-                value={formState.email}
-                onChange={(e) => handleFieldChange('email', e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-theme-primary">
-                Ocupación Actual *
+                Ocupación o Título Profesional
               </label>
               <input
                 type="text"
@@ -404,14 +324,14 @@ export default function MyProfileEditorPage() {
                 onChange={(e) =>
                   handleFieldChange('currentOccupation', e.target.value)
                 }
-                placeholder="Ej. Líder Track Robótica CITT / Full-Stack Developer"
+                placeholder="Ej. Líder de Proyectos IoT / Alumno 5to Semestre"
                 className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
               />
             </div>
 
-            <div className="sm:col-span-2">
+            <div>
               <label className="block text-xs font-bold text-theme-primary">
-                Carrera o Título Académico *
+                Carrera o Programa Académico
               </label>
               <input
                 type="text"
@@ -420,81 +340,58 @@ export default function MyProfileEditorPage() {
                 onChange={(e) =>
                   handleFieldChange('careerTitle', e.target.value)
                 }
-                placeholder="Ej. Ingeniería en Informática / Diseño Industrial"
+                placeholder="Ej. Ingeniería en Informática"
                 className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
               />
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-theme-primary">
-                Biografía & Propósito en la Red CITT
-              </label>
-              <textarea
-                rows={3}
-                value={formState.bio || ''}
-                onChange={(e) => handleFieldChange('bio', e.target.value)}
-                placeholder="Describe tu enfoque académico, proyectos e intereses de colaboración inter-sedes..."
-                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
-              />
-            </div>
-
-            {/* Read-Only Role Field (Security Hardened) */}
             <div>
               <label className="block text-xs font-bold text-theme-primary">
-                Rol Oficial CITT (Gobernado por Correo Institucional)
-              </label>
-              <div className="mt-1.5 flex items-center justify-between rounded-xl border border-theme bg-theme-subtle px-3.5 py-2.5">
-                <RoleBadge role={formState.role} size="md" />
-                <span className="text-xs font-bold text-theme-secondary">
-                  {ROLE_CONFIG[formState.role].shortLabel}
-                </span>
-              </div>
-              <p className="mt-1 text-[11px] text-theme-secondary">
-                Tu rol está gobernado por tu credencial institucional Duoc UC. Para solicitar cambios, contacta a tu Coordinador CITT.
-              </p>
-            </div>
-
-            {/* Campus Selector (18 Official Campuses) */}
-            <div>
-              <label className="block text-xs font-bold text-theme-primary">
-                Sede CITT Duoc UC (18 Sedes Oficiales)
+                Sede Duoc UC
               </label>
               <select
                 value={formState.campusSlug}
-                onChange={(e) =>
-                  handleFieldChange('campusSlug', e.target.value)
-                }
-                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                onChange={(e) => handleFieldChange('campusSlug', e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
               >
-                {CITT_CAMPUSES.map((campus) => (
-                  <option key={campus.slug} value={campus.slug}>
-                    {campus.name} ({campus.region})
+                {CITT_CAMPUSES.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.name} ({c.region})
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* School Selector */}
-            <div className="sm:col-span-2">
+            <div>
               <label className="block text-xs font-bold text-theme-primary">
-                Escuela Oficial Duoc UC (Color de Insignia Institucional)
+                Escuela Duoc UC
               </label>
               <select
                 value={formState.schoolSlug}
                 onChange={(e) =>
-                  handleFieldChange(
-                    'schoolSlug',
-                    e.target.value as DuocSchoolSlug
-                  )
+                  handleFieldChange('schoolSlug', e.target.value as DuocSchoolSlug)
                 }
-                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
+                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
               >
-                {DUOC_SCHOOLS.map((school) => (
-                  <option key={school.slug} value={school.slug}>
-                    {school.name} ({school.primaryHex})
+                {DUOC_SCHOOLS.map((s) => (
+                  <option key={s.slug} value={s.slug}>
+                    {s.name}
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-theme-primary">
+                Biografía y Trayectoria en la Red CITT
+              </label>
+              <textarea
+                rows={3}
+                value={formState.bio}
+                onChange={(e) => handleFieldChange('bio', e.target.value)}
+                placeholder="Describe tus intereses tecnológicos, proyectos previos o experiencia en innovación..."
+                className="mt-1.5 w-full rounded-xl border border-theme bg-theme-elevated px-3.5 py-2.5 text-sm text-theme-primary focus:border-[#FFB800] focus:outline-none"
+              />
             </div>
 
             {formState.role === 'consejero_carrera' && (
@@ -631,87 +528,14 @@ export default function MyProfileEditorPage() {
           </div>
 
           {/* Contacto & Redes Sociales */}
-          <div className="border-t border-theme pt-5">
-            <h2 className="text-sm font-bold text-theme-primary">
-              Perfil Profesional y Redes Sociales
-            </h2>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs text-theme-secondary">
-                  Teléfono Móvil (Para exportación vCard .vcf)
-                </label>
-                <input
-                  type="tel"
-                  value={formState.phoneOptional || ''}
-                  onChange={(e) =>
-                    handleFieldChange('phoneOptional', e.target.value)
-                  }
-                  placeholder="+56 9 1234 5678"
-                  className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-theme-secondary">
-                  URL de LinkedIn
-                </label>
-                <input
-                  type="text"
-                  value={formState.linkedinUrl || ''}
-                  onChange={(e) =>
-                    handleFieldChange('linkedinUrl', e.target.value)
-                  }
-                  placeholder="https://linkedin.com/in/tu-perfil"
-                  className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-theme-secondary">
-                  URL de GitHub
-                </label>
-                <input
-                  type="text"
-                  value={formState.githubUrl || ''}
-                  onChange={(e) =>
-                    handleFieldChange('githubUrl', e.target.value)
-                  }
-                  placeholder="https://github.com/tu-usuario"
-                  className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-theme-secondary">
-                  Portafolio o Sitio Web
-                </label>
-                <input
-                  type="text"
-                  value={formState.portfolioUrl || ''}
-                  onChange={(e) =>
-                    handleFieldChange('portfolioUrl', e.target.value)
-                  }
-                  placeholder="https://miportafolio.cl"
-                  className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs text-theme-secondary">
-                  Instagram u Otra Red Social
-                </label>
-                <input
-                  type="text"
-                  value={formState.instagramUrl || ''}
-                  onChange={(e) =>
-                    handleFieldChange('instagramUrl', e.target.value)
-                  }
-                  placeholder="https://instagram.com/tu-usuario"
-                  className="mt-1 w-full rounded-xl border border-theme bg-theme-elevated px-3 py-2 text-xs text-theme-primary focus:border-[#FFB800] focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
+          <ProfileSocialLinksForm
+            phone={formState.phoneOptional}
+            linkedinUrl={formState.linkedinUrl}
+            githubUrl={formState.githubUrl}
+            portfolioUrl={formState.portfolioUrl}
+            instagramUrl={formState.instagramUrl}
+            onChangeField={(field, val) => handleFieldChange(field as keyof CittMemberProfile, val)}
+          />
 
           {/* Submit Action */}
           <div className="flex items-center justify-between border-t border-theme pt-5">
@@ -737,22 +561,10 @@ export default function MyProfileEditorPage() {
         </form>
 
         {/* Right Column: Live Credential & QR Preview */}
-        <div className="space-y-4 lg:col-span-5">
-          <div className="sticky top-24 space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-xs font-bold tracking-wider text-theme-primary uppercase">
-                Vista Previa en Vivo (Credencial & QR)
-              </p>
-              <span className="text-xs text-theme-secondary">
-                Haz clic en &ldquo;Ver Código QR&rdquo; en la tarjeta
-              </span>
-            </div>
-            <PhygitalPassCard
-              profile={formState}
-              initialShowQR={previewInQrMode}
-            />
-          </div>
-        </div>
+        <ProfilePassLivePreview
+          profile={formState}
+          previewInQrMode={previewInQrMode}
+        />
       </div>
     </div>
   );

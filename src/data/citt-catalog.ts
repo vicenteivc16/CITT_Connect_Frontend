@@ -7,6 +7,7 @@ import {
   CittPinterestPin,
   CittProject,
   CittRole,
+  ProjectMaturityStage,
   DuocSchool,
   DuocSchoolSlug,
 } from '@/types/citt';
@@ -1365,3 +1366,34 @@ export const CITT_PINTEREST_PINS: CittPinterestPin[] = [
     authorName: 'Laboratorio de Hardware CITT',
   },
 ];
+
+export const MATURITY_LABELS: Record<
+  ProjectMaturityStage,
+  { label: string; step: number; color: string; desc: string }
+> = {
+  ideacion: {
+    label: 'Fase 1: Ideación & Validación',
+    step: 1,
+    color: '#00A499',
+    desc: 'Definición de requerimientos técnicos y conceptualización de arquitectura.',
+  },
+  prototipado: {
+    label: 'Fase 2: Prototipo Funcional',
+    step: 2,
+    color: '#FFB800',
+    desc: 'Desarrollo de MVP y pruebas controladas en laboratorios CITT.',
+  },
+  pruebas_campo: {
+    label: 'Fase 3: Validación en Terreno',
+    step: 3,
+    color: '#307FE2',
+    desc: 'Pruebas de campo con usuarios reales y métricas de desempeño.',
+  },
+  transferencia: {
+    label: 'Fase 4: Transferencia & Escala',
+    step: 4,
+    color: '#107C41',
+    desc: 'Implementación productiva, licenciamiento o adopción por partners.',
+  },
+};
+
