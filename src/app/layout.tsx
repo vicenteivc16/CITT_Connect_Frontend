@@ -6,14 +6,14 @@ import { Navbar } from '@/components/Navbar';
 
 const lato = Lato({
   subsets: ['latin'],
-  weight: ['300', '400', '700', '900'],
+  weight: ['400', '700', '900'],
   variable: '--font-lato',
   display: 'swap',
 });
 
 const merriweather = Merriweather({
   subsets: ['latin'],
-  weight: ['300', '400', '700', '900'],
+  weight: ['400', '700'],
   variable: '--font-merriweather',
   display: 'swap',
 });
