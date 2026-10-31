@@ -216,3 +216,54 @@ export interface CittNfcTag {
   lastScannedAt?: string;
 }
 
+export type ActivityModality = 'presencial' | 'hibrido' | 'online';
+export type ActivityStatus = 'abierto' | 'en_curso' | 'finalizado';
+
+export interface ActivityStudyMaterial {
+  id: string;
+  title: string;
+  description: string;
+  type: 'pdf' | 'github' | 'slides' | 'video' | 'link' | 'dataset';
+  url: string;
+  fileSizeOrDuration?: string;
+  uploadedAt: string;
+}
+
+export interface ActivitySchedule {
+  daysDescription: string;
+  sessionTime: string;
+  frequencyPerWeek: number;
+  durationWeeks: number;
+  startDate: string;
+  endDate: string;
+  totalHoursCitt: number;
+}
+
+export interface CittActivity {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  detailedDescription?: string;
+  schoolSlug: DuocSchoolSlug;
+  campusSlug: string;
+  roomLocation: string;
+  modality: ActivityModality;
+  status: ActivityStatus;
+  instructorName: string;
+  instructorRole: CittRole;
+  instructorUsername: string;
+  instructorAvatarUrl?: string;
+  capacityPerSession: number;
+  sessionsCountPerWeek: number;
+  totalSeats: number;
+  enrolledUsernames: string[];
+  waitingListUsernames?: string[];
+  schedule: ActivitySchedule;
+  studyMaterials: ActivityStudyMaterial[];
+  tags: string[];
+  coverImageUrl: string;
+  createdAt: string;
+}
+
+

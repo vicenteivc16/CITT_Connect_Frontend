@@ -65,6 +65,21 @@ export default function RolesAndSchoolsPage() {
 
   return (
     <div className="space-y-12 pb-10">
+      <div className="rounded-2xl border border-[#307FE2]/30 bg-[#307FE2]/10 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="text-xs text-theme-secondary text-center sm:text-left">
+          <strong className="text-theme-primary font-bold block mb-0.5">
+            ¿Buscabas los Talleres y Bootcamps CITT?
+          </strong>
+          Las actividades extracurriculares con cupos y cómputo de Horas CITT ahora están en la nueva sección de Actividades.
+        </div>
+        <Link
+          href="/actividades"
+          className="shrink-0 rounded-xl bg-[#FFB800] px-4 py-2 text-xs font-black text-[#1A1A1A] hover:bg-[#ffc633] transition shadow-sm"
+        >
+          Explorar Actividades CITT →
+        </Link>
+      </div>
+
       <section className="flex flex-col justify-between gap-4 border-b border-theme pb-8 sm:flex-row sm:items-end">
         <div className="space-y-2">
           <h1 className="text-balance text-3xl font-black tracking-tight text-theme-primary sm:text-4xl">

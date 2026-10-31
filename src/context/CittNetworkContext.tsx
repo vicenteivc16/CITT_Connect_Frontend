@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
+  CittActivity,
   CittFeedPost,
   CittMemberProfile,
   CittNfcTag,
@@ -12,6 +13,7 @@ import {
   ProjectCollaborator,
 } from '@/types/citt';
 import {
+  INITIAL_ACTIVITIES,
   INITIAL_POSTS,
   INITIAL_PROFILES,
   INITIAL_PROJECTS,
@@ -75,6 +77,11 @@ interface CittNetworkContextValue {
   addPost: (post: Omit<CittFeedPost, 'id' | 'createdAt'>) => void;
   updatePost: (id: string, updatedData: Partial<CittFeedPost>) => void;
   deletePost: (id: string) => void;
+  // Actividades CITT & Talleres
+  activities: CittActivity[];
+  enrollInActivity: (activityId: string) => { success: boolean; message: string };
+  unenrollFromActivity: (activityId: string) => { success: boolean; message: string };
+  addActivity: (activity: Omit<CittActivity, 'id' | 'createdAt' | 'enrolledUsernames'>) => void;
   // Hardware NFC Tags & Pins
   nfcTags: CittNfcTag[];
   resolveNfcTag: (tagUid: string) => {
@@ -100,6 +107,7 @@ const STORAGE_KEYS = {
   THEME: 'citt_connect_theme_v2',
   CONNECTION_REQUESTS: 'citt_connect_connection_requests_v3',
   NFC_TAGS: 'citt_connect_nfc_tags_v2',
+  ACTIVITIES: 'citt_connect_activities_v1',
 };
 
 const INITIAL_NFC_TAGS: CittNfcTag[] = [
@@ -202,6 +210,7 @@ export function CittNetworkProvider({
     ConnectionRequest[]
   >(INITIAL_CONNECTION_REQUESTS);
   const [nfcTags, setNfcTags] = useState<CittNfcTag[]>(INITIAL_NFC_TAGS);
+  const [activities, setActivities] = useState<CittActivity[]>(INITIAL_ACTIVITIES);
 
   useEffect(() => {
     try {
@@ -216,6 +225,7 @@ export function CittNetworkProvider({
         STORAGE_KEYS.CONNECTION_REQUESTS
       );
       const savedNfc = localStorage.getItem(STORAGE_KEYS.NFC_TAGS);
+      const savedActivities = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
 
       if (savedProfiles) setProfiles(JSON.parse(savedProfiles));
       if (savedProjects) setProjects(JSON.parse(savedProjects));
@@ -231,6 +241,9 @@ export function CittNetworkProvider({
       }
       if (savedNfc) {
         setNfcTags(JSON.parse(savedNfc));
+      }
+      if (savedActivities) {
+        setActivities(JSON.parse(savedActivities));
       }
     } catch {
       // Fallback to initial seed data if localStorage is unavailable
@@ -1037,12 +1050,154 @@ export function CittNetworkProvider({
     };
   };
 
+  const enrollInActivity = (
+    activityId: string
+  ): { success: boolean; message: string } => {
+    if (!activeUsername) {
+      return {
+        success: false,
+        message: 'Debes iniciar sesión con tu cuenta Duoc UC para inscribirte.',
+      };
+    }
+
+    const activity = activities.find((a) => a.id === activityId);
+    if (!activity) {
+      return { success: false, message: 'La actividad solicitada no existe.' };
+    }
+
+    if (activity.enrolledUsernames.includes(activeUsername)) {
+      return {
+        success: false,
+        message: 'Ya estás inscrito oficialmente en esta actividad.',
+      };
+    }
+
+    const isFull = activity.enrolledUsernames.length >= activity.totalSeats;
+    const updatedActivities = activities.map((act) => {
+      if (act.id !== activityId) return act;
+      if (isFull) {
+        const currentWaiting = act.waitingListUsernames || [];
+        if (currentWaiting.includes(activeUsername)) return act;
+        return {
+          ...act,
+          waitingListUsernames: [...currentWaiting, activeUsername],
+        };
+      }
+      return {
+        ...act,
+        enrolledUsernames: [...act.enrolledUsernames, activeUsername],
+      };
+    });
+
+    setActivities(updatedActivities);
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.ACTIVITIES,
+        JSON.stringify(updatedActivities)
+      );
+    } catch {
+      // ignore
+    }
+
+    if (isFull) {
+      return {
+        success: true,
+        message:
+          'El aforo de la sala está completo. Has quedado en Lista de Espera prioritaria.',
+      };
+    }
+
+    return {
+      success: true,
+      message: `¡Cupo confirmado! Te has inscrito en "${activity.title}". Se acreditarán ${activity.schedule.totalHoursCitt} Horas CITT al completar tu asistencia.`,
+    };
+  };
+
+  const unenrollFromActivity = (
+    activityId: string
+  ): { success: boolean; message: string } => {
+    if (!activeUsername) {
+      return { success: false, message: 'Debes iniciar sesión.' };
+    }
+
+    const updatedActivities = activities.map((act) => {
+      if (act.id !== activityId) return act;
+
+      const remainingEnrolled = act.enrolledUsernames.filter(
+        (u) => u !== activeUsername
+      );
+      const remainingWaiting = (act.waitingListUsernames || []).filter(
+        (u) => u !== activeUsername
+      );
+
+      if (
+        remainingWaiting.length > 0 &&
+        remainingEnrolled.length < act.totalSeats
+      ) {
+        const promotedUser = remainingWaiting[0];
+        return {
+          ...act,
+          enrolledUsernames: [...remainingEnrolled, promotedUser],
+          waitingListUsernames: remainingWaiting.slice(1),
+        };
+      }
+
+      return {
+        ...act,
+        enrolledUsernames: remainingEnrolled,
+        waitingListUsernames: remainingWaiting,
+      };
+    });
+
+    setActivities(updatedActivities);
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.ACTIVITIES,
+        JSON.stringify(updatedActivities)
+      );
+    } catch {
+      // ignore
+    }
+
+    return {
+      success: true,
+      message: 'Tu inscripción ha sido cancelada y el cupo fue liberado.',
+    };
+  };
+
+  const addActivity = (
+    activityData: Omit<CittActivity, 'id' | 'createdAt' | 'enrolledUsernames'>
+  ) => {
+    const newActivity: CittActivity = {
+      ...activityData,
+      id: `act_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      enrolledUsernames: [],
+      waitingListUsernames: [],
+    };
+
+    const updatedActivities = [newActivity, ...activities];
+    setActivities(updatedActivities);
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.ACTIVITIES,
+        JSON.stringify(updatedActivities)
+      );
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <CittNetworkContext.Provider
       value={{
         profiles,
         projects,
         posts,
+        activities,
+        enrollInActivity,
+        unenrollFromActivity,
+        addActivity,
         activeUser,
         isAuthenticated,
         theme,

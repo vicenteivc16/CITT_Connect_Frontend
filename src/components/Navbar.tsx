@@ -7,6 +7,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   BookOpen,
+  Calendar,
   ChevronDown,
   FolderGit2,
   LogIn,
@@ -47,9 +48,9 @@ const NAV_ITEMS = [
     icon: Newspaper,
   },
   {
-    href: '/roles',
-    label: 'Roles',
-    icon: Shield,
+    href: '/actividades',
+    label: 'Actividades',
+    icon: Calendar,
   },
   {
     href: '/mi-perfil',
