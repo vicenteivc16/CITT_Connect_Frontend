@@ -10,3 +10,4 @@ next-env.d.ts
 .impeccable/
 .vercel
 .env*
+supabase/.temp/
