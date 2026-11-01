@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -11,12 +11,18 @@ import {
 } from 'lucide-react';
 import { useCittNetwork } from '@/context/CittNetworkContext';
 import { RoleBadge } from '@/components/RoleBadge';
+import { CittMemberProfile } from '@/types/citt';
+import { getSupabaseProfiles } from '@/lib/supabase/profiles';
 
 // Subcomponentes del Panel Interno
 import {
   AdminSidebarNav,
   AdminModuleTab,
 } from '@/components/admin/AdminSidebarNav';
+import { TenantSelectorHeader } from '@/components/admin/TenantSelectorHeader';
+import { AdminTenantsManagement } from '@/components/admin/AdminTenantsManagement';
+import { AdminUsersManagement } from '@/components/admin/AdminUsersManagement';
+import { AdminAuditLogs } from '@/components/admin/AdminAuditLogs';
 import { AdminOverview } from '@/components/admin/AdminOverview';
 import { AdminMuroModeration } from '@/components/admin/AdminMuroModeration';
 import { AdminProjectsApproval } from '@/components/admin/AdminProjectsApproval';
@@ -27,10 +33,26 @@ export default function AdminControlPlanePage() {
   const { activeUser, isAuthenticated } = useCittNetwork();
   const [activeTab, setActiveTab] = useState<AdminModuleTab>('overview');
   const [mounted, setMounted] = useState(false);
+  const [selectedCampusSlug, setSelectedCampusSlug] = useState<string>('nacional');
+  const [profilesList, setProfilesList] = useState<CittMemberProfile[]>([]);
 
-  React.useEffect(() => {
+  const refreshProfiles = async () => {
+    const list = await getSupabaseProfiles();
+    setProfilesList(list);
+  };
+
+  useEffect(() => {
     setMounted(true);
+    refreshProfiles();
   }, []);
+
+  useEffect(() => {
+    if (activeUser) {
+      if (activeUser.role !== 'dev') {
+        setSelectedCampusSlug(activeUser.campusSlug || 'san-bernardo');
+      }
+    }
+  }, [activeUser]);
 
   if (!mounted) {
     return (
@@ -114,7 +136,15 @@ export default function AdminControlPlanePage() {
 
   // 3. Renderizado del Panel Interno Multi-Módulo
   return (
-    <div className="min-h-[85vh] space-y-8 pb-16">
+    <div className="min-h-[85vh] space-y-6 pb-16">
+      {/* Switcher Global / Tenant Header */}
+      <TenantSelectorHeader
+        selectedCampusSlug={selectedCampusSlug}
+        onSelectCampus={setSelectedCampusSlug}
+        userRole={activeUser.role}
+        userCampusSlug={activeUser.campusSlug}
+      />
+
       <div className="flex flex-col gap-8 lg:flex-row items-start">
         {/* Barra Lateral de Módulos */}
         <AdminSidebarNav
@@ -137,11 +167,36 @@ export default function AdminControlPlanePage() {
             />
           )}
 
-          {activeTab === 'muro' && <AdminMuroModeration />}
+          {activeTab === 'tenants' && (
+            <AdminTenantsManagement
+              activeUser={activeUser}
+              profiles={profilesList}
+              onSelectTenantForCalendar={(slug) => {
+                setSelectedCampusSlug(slug);
+                setActiveTab('calendario');
+              }}
+            />
+          )}
+
+          {activeTab === 'usuarios' && (
+            <AdminUsersManagement
+              activeUser={activeUser}
+              profiles={profilesList}
+              onRefreshProfiles={refreshProfiles}
+            />
+          )}
+
+          {activeTab === 'bitacora' && (
+            <AdminAuditLogs selectedCampusSlug={selectedCampusSlug} />
+          )}
+
+          {activeTab === 'calendario' && (
+            <AdminCalendarBookings selectedCampusSlug={selectedCampusSlug} />
+          )}
 
           {activeTab === 'proyectos' && <AdminProjectsApproval />}
 
-          {activeTab === 'calendario' && <AdminCalendarBookings />}
+          {activeTab === 'muro' && <AdminMuroModeration />}
 
           {activeTab === 'ecosistema' && <AdminModuleJiraPlaceholder />}
         </main>

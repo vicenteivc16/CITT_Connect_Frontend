@@ -3,7 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import {
+  Activity,
   ArrowLeft,
+  Building2,
   Calendar,
   CheckCircle2,
   ChevronRight,
@@ -14,6 +16,7 @@ import {
   Newspaper,
   Shield,
   Sparkles,
+  UserCheck,
   Workflow,
 } from 'lucide-react';
 import { RoleBadge } from '@/components/RoleBadge';
@@ -21,9 +24,12 @@ import { CittMemberProfile } from '@/types/citt';
 
 export type AdminModuleTab =
   | 'overview'
-  | 'muro'
-  | 'proyectos'
+  | 'tenants'
+  | 'usuarios'
+  | 'bitacora'
   | 'calendario'
+  | 'proyectos'
+  | 'muro'
   | 'ecosistema';
 
 interface AdminSidebarNavProps {
@@ -43,6 +49,8 @@ export function AdminSidebarNav({
   pendingProjectsCount,
   pendingBookingsCount,
 }: AdminSidebarNavProps) {
+  const isCoreDev = activeUser.role === 'dev';
+
   const navItems: {
     id: AdminModuleTab;
     label: string;
@@ -50,6 +58,7 @@ export function AdminSidebarNav({
     icon: React.ComponentType<{ className?: string }>;
     badgeCount?: number;
     badgeColor?: string;
+    onlyDev?: boolean;
   }[] = [
     {
       id: 'overview',
@@ -58,12 +67,31 @@ export function AdminSidebarNav({
       icon: LayoutDashboard,
     },
     {
-      id: 'muro',
-      label: 'Muro & Noticias',
-      sublabel: 'Moderación de despachos',
-      icon: Newspaper,
-      badgeCount: pendingPostsCount,
-      badgeColor: '#307FE2',
+      id: 'tenants',
+      label: 'Sedes & Tenants CITT',
+      sublabel: '18 Sedes, Salas & Tótems',
+      icon: Building2,
+    },
+    {
+      id: 'usuarios',
+      label: 'Padrón de Usuarios',
+      sublabel: 'Gestión de roles y sedes',
+      icon: UserCheck,
+      onlyDev: true,
+    },
+    {
+      id: 'bitacora',
+      label: 'Bitácora de Auditoría',
+      sublabel: 'Historial en tiempo real',
+      icon: Activity,
+    },
+    {
+      id: 'calendario',
+      label: 'Salas & Calendario CITT',
+      sublabel: 'Reservas, Tótems & QR',
+      icon: Calendar,
+      badgeCount: pendingBookingsCount,
+      badgeColor: '#43B02A',
     },
     {
       id: 'proyectos',
@@ -74,12 +102,12 @@ export function AdminSidebarNav({
       badgeColor: '#FFB800',
     },
     {
-      id: 'calendario',
-      label: 'Salas & Calendario CITT',
-      sublabel: 'Reservas, Tótems & QR',
-      icon: Calendar,
-      badgeCount: pendingBookingsCount,
-      badgeColor: '#43B02A',
+      id: 'muro',
+      label: 'Muro & Noticias',
+      sublabel: 'Moderación de despachos',
+      icon: Newspaper,
+      badgeCount: pendingPostsCount,
+      badgeColor: '#307FE2',
     },
     {
       id: 'ecosistema',
@@ -139,7 +167,9 @@ export function AdminSidebarNav({
           Módulos de Gestión
         </span>
 
-        {navItems.map((item) => {
+        {navItems
+          .filter((item) => !item.onlyDev || isCoreDev)
+          .map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (

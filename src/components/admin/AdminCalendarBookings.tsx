@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { RoleBadge } from '@/components/RoleBadge';
 import { CittRole } from '@/types/citt';
+import { getCampusBySlug } from '@/data/citt-catalog';
 import {
   getSupabaseReservations,
   getSupabaseAdminBlocks,
@@ -180,7 +181,11 @@ const INITIAL_BLOCKS: SupabaseAdminBlock[] = [
 
 type SubTab = 'reservas' | 'historial' | 'bloqueos' | 'kpis';
 
-export function AdminCalendarBookings() {
+interface AdminCalendarBookingsProps {
+  selectedCampusSlug?: string;
+}
+
+export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBookingsProps = {}) {
   const [subTab, setSubTab] = useState<SubTab>('reservas');
   const [reservations, setReservations] = useState<RoomReservation[]>(INITIAL_RESERVATIONS);
   const [adminBlocks, setAdminBlocks] = useState<SupabaseAdminBlock[]>(INITIAL_BLOCKS);
@@ -298,6 +303,18 @@ export function AdminCalendarBookings() {
   const filteredReservations = reservations.filter((r) => {
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
     if (filterRoom !== 'all' && r.campusName !== filterRoom) return false;
+    if (selectedCampusSlug && selectedCampusSlug !== 'nacional') {
+      const short = getCampusBySlug(selectedCampusSlug).shortName.toLowerCase();
+      if (!r.campusName.toLowerCase().includes(short)) return false;
+    }
+    return true;
+  });
+
+  const filteredBlocks = adminBlocks.filter((b) => {
+    if (selectedCampusSlug && selectedCampusSlug !== 'nacional') {
+      const short = getCampusBySlug(selectedCampusSlug).shortName.toLowerCase();
+      if (!b.campus.toLowerCase().includes(short)) return false;
+    }
     return true;
   });
 
@@ -712,12 +729,12 @@ export function AdminCalendarBookings() {
           </div>
 
           <div className="space-y-3">
-            {adminBlocks.length === 0 ? (
+            {filteredBlocks.length === 0 ? (
               <div className="rounded-3xl border border-theme bg-theme-surface p-12 text-center text-xs text-theme-secondary">
-                No hay bloqueos activos. Todas las salas están disponibles en el calendario.
+                No hay bloqueos activos para este ámbito. Todas las salas están disponibles en el calendario.
               </div>
             ) : (
-              adminBlocks.map((block) => (
+              filteredBlocks.map((block) => (
                 <div
                   key={block.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card"

@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './client';
-import { CittMemberProfile } from '@/types/citt';
+import { CittMemberProfile, CittRole } from '@/types/citt';
 
 export async function getSupabaseProfiles(): Promise<CittMemberProfile[]> {
   if (!isSupabaseConfigured) return [];
@@ -44,5 +44,47 @@ export async function getSupabaseProfiles(): Promise<CittMemberProfile[]> {
   } catch (err) {
     console.error('Exception fetching profiles:', err);
     return [];
+  }
+}
+
+export async function updateSupabaseProfileRole(username: string, newRole: CittRole): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole, updated_at: new Date().toISOString() })
+      .eq('username', username);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function updateSupabaseProfileCampus(username: string, newCampusSlug: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ campus_slug: newCampusSlug, updated_at: new Date().toISOString() })
+      .eq('username', username);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function toggleSupabaseProfileVerification(username: string, isVerified: boolean): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_verified: isVerified, updated_at: new Date().toISOString() })
+      .eq('username', username);
+    return !error;
+  } catch {
+    return false;
   }
 }
