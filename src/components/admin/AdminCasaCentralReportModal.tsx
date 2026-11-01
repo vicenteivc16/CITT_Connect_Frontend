@@ -40,7 +40,7 @@ export function AdminCasaCentralReportModal({
       ? Math.round(
           (attendedReservations / (attendedReservations + noShowReservations)) * 100
         )
-      : 95;
+      : 100;
 
   const handleDownloadCsv = () => {
     const headers = [

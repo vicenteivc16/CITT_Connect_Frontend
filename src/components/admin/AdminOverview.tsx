@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Calendar,
   CheckCircle2,
@@ -14,6 +14,7 @@ import {
   Users,
 } from 'lucide-react';
 import { AdminModuleTab } from './AdminSidebarNav';
+import { getSupabaseAuditLogs, AuditLogEntry } from '@/lib/supabase/audit';
 
 interface AdminOverviewProps {
   onNavigateTab: (tab: AdminModuleTab) => void;
@@ -28,6 +29,18 @@ export function AdminOverview({
   pendingProjectsCount,
   pendingBookingsCount,
 }: AdminOverviewProps) {
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    getSupabaseAuditLogs().then((res) => {
+      if (isMounted) setLogs(res);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const kpis = [
     {
       id: 'muro',
@@ -50,8 +63,8 @@ export function AdminOverview({
     {
       id: 'reservas',
       title: 'Reservas de Sala Hoy',
-      value: pendingBookingsCount + 4,
-      detail: 'Sala 312 San Bernardo & Labs CITT',
+      value: pendingBookingsCount,
+      detail: 'Salas activas & Labs CITT',
       icon: Calendar,
       color: '#43B02A',
       tab: 'calendario' as AdminModuleTab,
@@ -59,46 +72,11 @@ export function AdminOverview({
     {
       id: 'asistencia',
       title: 'Tasa de Asistencia en Salas',
-      value: '94.2%',
-      detail: 'Solo 5.8% no-show (1 sanción)',
+      value: '100%',
+      detail: 'Sin inasistencias registradas',
       icon: TrendingUp,
       color: '#107C41',
       tab: 'calendario' as AdminModuleTab,
-    },
-  ];
-
-  const recentLogs = [
-    {
-      id: 'log-1',
-      time: 'Hace 12 min',
-      badge: 'Muro',
-      badgeColor: '#307FE2',
-      text: 'Despacho «RoboChallenge Inter-Sedes» aprobado para publicación nacional.',
-      author: 'Paz Morales (Docente CITT)',
-    },
-    {
-      id: 'log-2',
-      time: 'Hace 38 min',
-      badge: 'Calendario CITT',
-      badgeColor: '#43B02A',
-      text: 'Reserva validada por QR Móvil en Sala 312: «Taller IoT con ESP32».',
-      author: 'Vicente Vásquez (Líder CITT)',
-    },
-    {
-      id: 'log-3',
-      time: 'Hace 1 h',
-      badge: 'Proyectos',
-      badgeColor: '#FFB800',
-      text: 'Iniciativa «Sentry Agro-IoT» promovida a fase Pruebas en Campo (TRL 5).',
-      author: 'Felipe Rogers (Consejero)',
-    },
-    {
-      id: 'log-4',
-      time: 'Hace 3 h',
-      badge: 'Gobernanza',
-      badgeColor: '#7C3AED',
-      text: 'Token de sincronización CITT Jira emitido exitosamente.',
-      author: 'Sistema Central',
     },
   ];
 
@@ -295,30 +273,30 @@ export function AdminOverview({
             </h2>
 
             <div className="divide-y divide-[var(--citt-border)]">
-              {recentLogs.map((log) => (
-                <div key={log.id} className="py-3.5 first:pt-0 last:pb-0 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span
-                      style={{
-                        backgroundColor: `${log.badgeColor}20`,
-                        color: log.badgeColor,
-                      }}
-                      className="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider"
-                    >
-                      {log.badge}
-                    </span>
-                    <span className="text-[10px] text-theme-secondary">
-                      {log.time}
-                    </span>
-                  </div>
-                  <p className="text-xs text-theme-primary font-medium">
-                    {log.text}
-                  </p>
-                  <p className="text-[10px] text-theme-secondary">
-                    Por: {log.author}
-                  </p>
+              {logs.length === 0 ? (
+                <div className="py-8 text-center text-xs text-theme-secondary">
+                  Sin eventos recientes en la bitácora institucional.
                 </div>
-              ))}
+              ) : (
+                logs.slice(0, 5).map((log) => (
+                  <div key={log.id} className="py-3.5 first:pt-0 last:pb-0 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full bg-[#FFB800]/15 text-[#FFB800] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
+                        {log.actionType.replace('_', ' ')}
+                      </span>
+                      <span className="text-[10px] text-theme-secondary">
+                        {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-theme-primary font-medium">
+                      {log.title}
+                    </p>
+                    <p className="text-[10px] text-theme-secondary">
+                      Por: {log.actorName} (@{log.actorUsername})
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           </section>
         </div>

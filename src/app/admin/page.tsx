@@ -13,6 +13,8 @@ import { useCittNetwork } from '@/context/CittNetworkContext';
 import { RoleBadge } from '@/components/RoleBadge';
 import { CittMemberProfile } from '@/types/citt';
 import { getSupabaseProfiles } from '@/lib/supabase/profiles';
+import { getSupabaseReservations } from '@/lib/supabase/reservations';
+import { getSupabaseProjects } from '@/lib/supabase/projects';
 
 // Subcomponentes del Panel Interno
 import {
@@ -35,15 +37,25 @@ export default function AdminControlPlanePage() {
   const [mounted, setMounted] = useState(false);
   const [selectedCampusSlug, setSelectedCampusSlug] = useState<string>('nacional');
   const [profilesList, setProfilesList] = useState<CittMemberProfile[]>([]);
+  const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
+  const [pendingProjectsCount, setPendingProjectsCount] = useState(0);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
 
-  const refreshProfiles = async () => {
-    const list = await getSupabaseProfiles();
+  const refreshData = async () => {
+    const [list, rsvs, projs] = await Promise.all([
+      getSupabaseProfiles(),
+      getSupabaseReservations(),
+      getSupabaseProjects(),
+    ]);
     setProfilesList(list);
+    setPendingBookingsCount(rsvs.filter((r) => r.status.toUpperCase() === 'PENDING').length);
+    setPendingProjectsCount(projs.filter((p) => p.status === 'idea').length);
+    setPendingPostsCount(0);
   };
 
   useEffect(() => {
     setMounted(true);
-    refreshProfiles();
+    refreshData();
   }, []);
 
   useEffect(() => {
@@ -151,9 +163,9 @@ export default function AdminControlPlanePage() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           activeUser={activeUser}
-          pendingPostsCount={2}
-          pendingProjectsCount={2}
-          pendingBookingsCount={1}
+          pendingPostsCount={pendingPostsCount}
+          pendingProjectsCount={pendingProjectsCount}
+          pendingBookingsCount={pendingBookingsCount}
         />
 
         {/* Contenedor del Módulo Activo */}
@@ -161,9 +173,9 @@ export default function AdminControlPlanePage() {
           {activeTab === 'overview' && (
             <AdminOverview
               onNavigateTab={setActiveTab}
-              pendingPostsCount={2}
-              pendingProjectsCount={2}
-              pendingBookingsCount={1}
+              pendingPostsCount={pendingPostsCount}
+              pendingProjectsCount={pendingProjectsCount}
+              pendingBookingsCount={pendingBookingsCount}
             />
           )}
 
@@ -182,7 +194,7 @@ export default function AdminControlPlanePage() {
             <AdminUsersManagement
               activeUser={activeUser}
               profiles={profilesList}
-              onRefreshProfiles={refreshProfiles}
+              onRefreshProfiles={refreshData}
             />
           )}
 

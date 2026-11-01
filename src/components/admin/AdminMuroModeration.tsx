@@ -31,60 +31,7 @@ export interface DispatchToModerate {
   isPinned?: boolean;
 }
 
-const INITIAL_DISPATCHES: DispatchToModerate[] = [
-  {
-    id: 'disp-mod-1',
-    title: 'Desafío Inter-Sedes de Robótica Autónoma 2026 en San Joaquín',
-    summary:
-      'Convocatoria abierta para delegaciones de todas las sedes del país. Se habilitarán pistas con obstáculos y sensores de visión artificial.',
-    authorName: 'Camila Valenzuela',
-    authorRole: 'Líder CITT Robótica',
-    campusSlug: 'san-joaquin',
-    schoolSlug: 'informatica',
-    submittedAt: 'Hoy a las 14:20',
-    status: 'pending',
-    isPinned: false,
-  },
-  {
-    id: 'disp-mod-2',
-    title: 'Piloto AgroTech: Sensores LoRaWAN en Viñedos de Pirque',
-    summary:
-      'Estudiantes de San Bernardo y Puente Alto instalan nodos de humedad y temperatura con enlace satelital de bajo consumo energético.',
-    authorName: 'Rodrigo Espinoza',
-    authorRole: 'Docente Coordinador',
-    campusSlug: 'san-bernardo',
-    schoolSlug: 'recursos-naturales',
-    submittedAt: 'Hoy a las 11:05',
-    status: 'pending',
-    isPinned: false,
-  },
-  {
-    id: 'disp-mod-3',
-    title: 'Hackathon Nacional CITT: 48 Horas de Desarrollo Multidisciplinario',
-    summary:
-      'Inscripciones masivas con cupos confirmados en 18 sedes. Premios de patrocinadores de la industria para los mejores proyectos validados.',
-    authorName: 'Vicente Vásquez',
-    authorRole: 'Líder General CITT',
-    campusSlug: 'plaza-vespucio',
-    schoolSlug: 'informatica',
-    submittedAt: 'Ayer',
-    status: 'approved',
-    isPinned: true,
-  },
-  {
-    id: 'disp-mod-4',
-    title: 'Taller de Diseño Biofílico y Modelado 3D en Viña del Mar',
-    summary:
-      'Exploración de biomateriales aplicados a carcasas de hardware abierto. Taller presencial con transmisión inter-sedes.',
-    authorName: 'Francisca Morales',
-    authorRole: 'Consejera de Escuela',
-    campusSlug: 'vina-del-mar',
-    schoolSlug: 'diseno',
-    submittedAt: 'Hace 2 días',
-    status: 'approved',
-    isPinned: false,
-  },
-];
+const INITIAL_DISPATCHES: DispatchToModerate[] = [];
 
 export function AdminMuroModeration() {
   const [dispatches, setDispatches] = useState<DispatchToModerate[]>(INITIAL_DISPATCHES);

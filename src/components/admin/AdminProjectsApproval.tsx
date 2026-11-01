@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowUpRight,
@@ -19,6 +19,7 @@ import {
 import { CITT_CAMPUSES, getCampusBySlug, MATURITY_LABELS } from '@/data/citt-catalog';
 import { SchoolBadge } from '@/components/RoleBadge';
 import { ProjectMaturityStage } from '@/types/citt';
+import { getSupabaseProjects } from '@/lib/supabase/projects';
 
 export interface ProjectToReview {
   id: string;
@@ -35,58 +36,38 @@ export interface ProjectToReview {
   status: 'pending_review' | 'approved_public' | 'needs_revision';
 }
 
-const INITIAL_PROJECTS_QUEUE: ProjectToReview[] = [
-  {
-    id: 'proj-staging-1',
-    slug: 'gemelos-digitales-puerto-san-antonio',
-    title: 'Gemelo Digital y Telemetría Portuaria San Antonio',
-    summary:
-      'Modelo 3D interactivo con sensores de mareas y posicionamiento de grúas para optimización logística intermodal en la V Región.',
-    leadName: 'Ignacio Sepúlveda',
-    leadUsername: 'ignacio-sepulveda',
-    campusSlug: 'valparaiso',
-    schoolSlug: 'informatica',
-    maturityStage: 'prototipado',
-    neededSpecialties: ['Three.js', 'WebSockets', 'Modelado BIM', 'IoT Industrial'],
-    submittedAt: 'Hoy a las 09:40',
-    status: 'pending_review',
-  },
-  {
-    id: 'proj-staging-2',
-    slug: 'sistema-monitoreo-colmenas-apicolas',
-    title: 'Monitoreo Acústico y Temperatura para Colmenas Apícolas',
-    summary:
-      'Dispositivo solar de bajo costo con micrófono I2S y redes neuronales embebidas para detectar enjambrazón y salud de la reina.',
-    leadName: 'Daniela Valenzuela',
-    leadUsername: 'daniela-valenzuela',
-    campusSlug: 'melipilla',
-    schoolSlug: 'recursos-naturales',
-    maturityStage: 'ideacion',
-    neededSpecialties: ['Edge AI', 'Microcontroladores', 'AgroTech'],
-    submittedAt: 'Ayer',
-    status: 'pending_review',
-  },
-  {
-    id: 'proj-staging-3',
-    slug: 'sentry-agro-iot',
-    title: 'Sentry Agro-IoT: Red de Sensores de Humedad y Microclima',
-    summary:
-      'Plataforma integral con nodos LoRaWAN de bajo consumo energético para el monitoreo agrícola en tiempo real.',
-    leadName: 'Vicente Vásquez',
-    leadUsername: 'vicente-vasquez',
-    campusSlug: 'san-bernardo',
-    schoolSlug: 'informatica',
-    maturityStage: 'pruebas_campo',
-    neededSpecialties: ['React', 'Microcontroladores', 'LoRaWAN'],
-    submittedAt: 'Hace 3 días',
-    status: 'approved_public',
-  },
-];
+const INITIAL_PROJECTS_QUEUE: ProjectToReview[] = [];
 
 export function AdminProjectsApproval() {
   const [projects, setProjects] = useState<ProjectToReview[]>(INITIAL_PROJECTS_QUEUE);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'revision'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+    getSupabaseProjects().then((remoteProjs) => {
+      if (!isMounted) return;
+      setProjects(
+        remoteProjs.map((p) => ({
+          id: p.id,
+          slug: p.slug,
+          title: p.title,
+          summary: p.summary,
+          leadName: p.leadName,
+          leadUsername: p.leadUsername,
+          campusSlug: p.originCampusSlug,
+          schoolSlug: p.schoolSlug,
+          maturityStage: p.maturityStage || 'ideacion',
+          neededSpecialties: p.neededSpecialties,
+          submittedAt: p.createdAt,
+          status: p.status === 'finalizado' ? 'approved_public' : 'pending_review',
+        }))
+      );
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleApprove = (id: string) => {
     setProjects((prev) =>

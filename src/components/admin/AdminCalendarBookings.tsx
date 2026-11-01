@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { RoleBadge } from '@/components/RoleBadge';
 import { CittRole } from '@/types/citt';
-import { getCampusBySlug } from '@/data/citt-catalog';
+import { CITT_CAMPUSES, getCampusBySlug } from '@/data/citt-catalog';
 import {
   getSupabaseReservations,
   getSupabaseAdminBlocks,
@@ -70,116 +70,9 @@ export interface RoomReservation {
   cittPassSentAt?: string;
 }
 
-const INITIAL_RESERVATIONS: RoomReservation[] = [
-  {
-    id: 'res-101',
-    roomName: 'Sala 312 (Laboratorio CITT)',
-    campusName: 'San Bernardo',
-    workshopTitle: 'Taller de Prototipado IoT y Sensores Agrícolas',
-    applicantName: 'Vicente Vásquez',
-    applicantUsername: 'vicente.vasquez',
-    applicantEmail: 'vi.vasquezc@duocuc.cl',
-    applicantAvatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=600&q=80',
-    applicantRole: 'dev',
-    career: 'Ingeniería en Informática',
-    schoolName: 'Escuela de Informática y Telecomunicaciones',
-    dateStr: '2026-10-31',
-    startTime: '10:00',
-    endTime: '12:00',
-    attendeesCount: 6,
-    requiresComputers: true,
-    status: 'APPROVED',
-    cittHoursGranted: 2,
-    cittPassCode: 'CITTPASS-RES101-2026',
-    cittPassSentAt: '2026-10-31T10:05:00Z',
-  },
-  {
-    id: 'res-102',
-    roomName: 'Sala 312 (Laboratorio CITT)',
-    campusName: 'San Bernardo',
-    workshopTitle: 'Sesión de Programación de Microcontroladores ESP32',
-    applicantName: 'Matías Alarcón',
-    applicantUsername: 'matias-alarcon',
-    applicantEmail: 'm.alarcon@duocuc.cl',
-    applicantRole: 'usuario_citt',
-    career: 'Automatización y Robótica',
-    schoolName: 'Escuela de Ingeniería',
-    dateStr: '2026-10-31',
-    startTime: '14:30',
-    endTime: '16:00',
-    attendeesCount: 4,
-    requiresComputers: true,
-    status: 'PENDING',
-    cittHoursGranted: 1.5,
-  },
-  {
-    id: 'res-103',
-    roomName: 'Laboratorio de Hardware Abierto',
-    campusName: 'San Joaquín',
-    workshopTitle: 'Mesa de Trabajo: Gemelos Digitales Portuarios',
-    applicantName: 'Ignacio Sepúlveda',
-    applicantUsername: 'ignacio-sepulveda',
-    applicantEmail: 'i.sepulveda@duocuc.cl',
-    applicantRole: 'lider_citt',
-    career: 'Ingeniería en Informática',
-    schoolName: 'Escuela de Informática y Telecomunicaciones',
-    dateStr: '2026-11-02',
-    startTime: '11:00',
-    endTime: '13:00',
-    attendeesCount: 8,
-    requiresComputers: false,
-    status: 'APPROVED',
-    cittHoursGranted: 2,
-    cittPassCode: 'CITTPASS-RES103-2026',
-    cittPassSentAt: '2026-10-30T15:20:00Z',
-  },
-  {
-    id: 'res-104',
-    roomName: 'Sala 312 (Laboratorio CITT)',
-    campusName: 'San Bernardo',
-    workshopTitle: 'Pruebas de Ciberseguridad en Redes Industriales',
-    applicantName: 'Javier Morales',
-    applicantUsername: 'javier-morales',
-    applicantEmail: 'j.morales@duocuc.cl',
-    applicantRole: 'usuario_citt',
-    career: 'Ingeniería en Conectividad y Redes',
-    schoolName: 'Escuela de Informática y Telecomunicaciones',
-    dateStr: '2026-10-30',
-    startTime: '16:00',
-    endTime: '17:30',
-    attendeesCount: 5,
-    requiresComputers: true,
-    status: 'ATTENDED',
-    cittHoursGranted: 1.5,
-    cittPassCode: 'CITTPASS-RES104-2026',
-    cittPassSentAt: '2026-10-29T11:00:00Z',
-  },
-];
+const INITIAL_RESERVATIONS: RoomReservation[] = [];
 
-const INITIAL_BLOCKS: SupabaseAdminBlock[] = [
-  {
-    id: 'blk-01',
-    campus: 'San Bernardo',
-    room: 'Sala 312 (Laboratorio CITT)',
-    blockDate: '2026-11-01',
-    startTime: '08:30',
-    endTime: '21:00',
-    reason: 'Feriado Nacional de Todos los Santos (Receso Duoc UC)',
-    createdBy: 'Coordinación Duoc UC',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'blk-02',
-    campus: 'San Bernardo',
-    room: 'Sala 312 (Laboratorio CITT)',
-    blockDate: '2026-11-05',
-    startTime: '08:30',
-    endTime: '13:00',
-    reason: 'Mantenimiento Preventivo e Inspección de Seguridad Kits IoT',
-    createdBy: 'Prof. Patricio González',
-    createdAt: new Date().toISOString(),
-  },
-];
+const INITIAL_BLOCKS: SupabaseAdminBlock[] = [];
 
 type SubTab = 'reservas' | 'historial' | 'bloqueos' | 'kpis' | 'salas';
 
@@ -204,7 +97,7 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
   useEffect(() => {
     let isMounted = true;
     getSupabaseReservations().then((remoteRsvs) => {
-      if (!isMounted || remoteRsvs.length === 0) return;
+      if (!isMounted) return;
       const mapped: RoomReservation[] = remoteRsvs.map((r) => ({
         id: r.id,
         roomName: r.room,
@@ -231,7 +124,7 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
     });
 
     getSupabaseAdminBlocks().then((remoteBlocks) => {
-      if (!isMounted || remoteBlocks.length === 0) return;
+      if (!isMounted) return;
       setAdminBlocks(remoteBlocks);
     });
 
@@ -473,8 +366,11 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
               className="rounded-xl border border-theme bg-theme-surface px-3 py-1.5 text-xs font-bold text-theme-primary focus:border-[#FFB800] focus:outline-none"
             >
               <option value="all">Todas las Sedes</option>
-              <option value="San Bernardo">Sede San Bernardo (Sala 312)</option>
-              <option value="San Joaquín">Sede San Joaquín (Lab Hardware)</option>
+              {CITT_CAMPUSES.map((c) => (
+                <option key={c.slug} value={c.shortName}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -843,9 +739,19 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
                   Tasa de Asistencia
                 </span>
                 <span className="text-3xl font-black text-[#43B02A] mt-1 block">
-                  94.2%
+                  {reservations.filter((r) => r.status === 'ATTENDED' || r.status === 'NO_SHOW').length > 0
+                    ? `${(
+                        (reservations.filter((r) => r.status === 'ATTENDED').length /
+                          reservations.filter((r) => r.status === 'ATTENDED' || r.status === 'NO_SHOW').length) *
+                        100
+                      ).toFixed(1)}%`
+                    : '100%'}
                 </span>
-                <span className="text-[10px] text-theme-secondary">5.8% no-show preventivo</span>
+                <span className="text-[10px] text-theme-secondary">
+                  {reservations.filter((r) => r.status === 'NO_SHOW').length > 0
+                    ? `${reservations.filter((r) => r.status === 'NO_SHOW').length} no-show`
+                    : 'Sin inasistencias'}
+                </span>
               </div>
 
               <div className="rounded-2xl border border-theme bg-theme-subtle p-4 text-center">
