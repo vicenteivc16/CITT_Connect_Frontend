@@ -18,8 +18,10 @@ import {
 } from 'lucide-react';
 import { CITT_CAMPUSES, getCampusBySlug, MATURITY_LABELS } from '@/data/citt-catalog';
 import { SchoolBadge } from '@/components/RoleBadge';
-import { ProjectMaturityStage } from '@/types/citt';
+import { CittMemberProfile, ProjectMaturityStage } from '@/types/citt';
 import { getSupabaseProjects } from '@/lib/supabase/projects';
+import { supabase } from '@/lib/supabase/client';
+import { logSupabaseAudit } from '@/lib/supabase/audit';
 
 export interface ProjectToReview {
   id: string;
@@ -38,7 +40,15 @@ export interface ProjectToReview {
 
 const INITIAL_PROJECTS_QUEUE: ProjectToReview[] = [];
 
-export function AdminProjectsApproval() {
+interface AdminProjectsApprovalProps {
+  activeUser: CittMemberProfile;
+  selectedCampusSlug?: string;
+}
+
+export function AdminProjectsApproval({
+  activeUser,
+  selectedCampusSlug = 'nacional',
+}: AdminProjectsApprovalProps) {
   const [projects, setProjects] = useState<ProjectToReview[]>(INITIAL_PROJECTS_QUEUE);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'revision'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,7 +70,7 @@ export function AdminProjectsApproval() {
           maturityStage: p.maturityStage || 'ideacion',
           neededSpecialties: p.neededSpecialties,
           submittedAt: p.createdAt,
-          status: p.status === 'finalizado' ? 'approved_public' : 'pending_review',
+          status: p.status === 'idea' ? 'pending_review' : 'approved_public',
         }))
       );
     });
@@ -69,25 +79,76 @@ export function AdminProjectsApproval() {
     };
   }, []);
 
-  const handleApprove = (id: string) => {
+  const handleApprove = async (id: string) => {
+    const target = projects.find((p) => p.id === id);
     setProjects((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: 'approved_public' } : p))
     );
+    try {
+      await supabase.from('projects').update({ status: 'prototipo' }).eq('id', id);
+      if (target) {
+        await logSupabaseAudit({
+          actionType: 'APROBACION_PROYECTO',
+          title: `Curaduría aprobada: ${target.title} (Sede: ${target.campusSlug})`,
+          actorUsername: activeUser.username,
+          actorName: activeUser.fullName,
+          actorRole: activeUser.role,
+          campusSlug: target.campusSlug,
+          metadata: { projectId: target.id, slug: target.slug },
+        });
+      }
+    } catch (err) {
+      console.error('Error approving project in Supabase:', err);
+    }
   };
 
-  const handleRequestRevision = (id: string) => {
+  const handleRequestRevision = async (id: string) => {
+    const target = projects.find((p) => p.id === id);
     setProjects((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: 'needs_revision' } : p))
     );
+    try {
+      await supabase.from('projects').update({ status: 'idea' }).eq('id', id);
+      if (target) {
+        await logSupabaseAudit({
+          actionType: 'OBSERVACION_PROYECTO',
+          title: `Observación en curaduría: ${target.title} (Sede: ${target.campusSlug})`,
+          actorUsername: activeUser.username,
+          actorName: activeUser.fullName,
+          actorRole: activeUser.role,
+          campusSlug: target.campusSlug,
+          metadata: { projectId: target.id, slug: target.slug },
+        });
+      }
+    } catch (err) {
+      console.error('Error requesting revision for project in Supabase:', err);
+    }
   };
 
-  const handleChangeMaturity = (id: string, newStage: ProjectMaturityStage) => {
+  const handleChangeMaturity = async (id: string, newStage: ProjectMaturityStage) => {
     setProjects((prev) =>
       prev.map((p) => (p.id === id ? { ...p, maturityStage: newStage } : p))
     );
+    try {
+      await supabase.from('projects').update({ maturity_stage: newStage }).eq('id', id);
+    } catch (err) {
+      console.error('Error updating maturity stage in Supabase:', err);
+    }
   };
 
+  // Aislamiento por Sede / Tenant
+  const isDev = activeUser.role === 'dev';
+  const effectiveTenantSlug = !isDev
+    ? activeUser.campusSlug
+    : selectedCampusSlug && selectedCampusSlug !== 'nacional'
+    ? selectedCampusSlug
+    : null;
+
   const filteredProjects = projects.filter((p) => {
+    // Si no es dev, o si el dev filtró por sede, aislar estrictamente al tenant correspondiente
+    if (effectiveTenantSlug && p.campusSlug !== effectiveTenantSlug) {
+      return false;
+    }
     if (filterStatus === 'pending' && p.status !== 'pending_review') return false;
     if (filterStatus === 'approved' && p.status !== 'approved_public') return false;
     if (filterStatus === 'revision' && p.status !== 'needs_revision') return false;

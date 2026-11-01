@@ -20,7 +20,7 @@ import { EnrollmentModal } from '@/components/actividades/EnrollmentModal';
 import { CittActivity, DuocSchoolSlug, ActivityModality } from '@/types/citt';
 
 export default function ActividadesPage() {
-  const { activities, activeUser } = useCittNetwork();
+  const { activities, activeUser, isAuthenticated } = useCittNetwork();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSchool, setSelectedSchool] = useState<DuocSchoolSlug | 'all'>('all');
@@ -33,11 +33,24 @@ export default function ActividadesPage() {
   const [enrollmentTarget, setEnrollmentTarget] = useState<CittActivity | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const isPrivileged = ['dev', 'personal_duoc', 'lider_citt'].includes(activeUser.role);
+  const isPrivileged = Boolean(
+    isAuthenticated &&
+      activeUser &&
+      ['dev', 'personal_duoc', 'consejero_carrera', 'lider_citt'].includes(activeUser.role)
+  );
 
   // Filtrado de Actividades
   const filteredActivities = useMemo(() => {
     return activities.filter((act) => {
+      // Filtrar actividades aún en evaluación en el panel interno
+      if (act.status === 'en_espera') {
+        const isAuthor = activeUser?.username && act.instructorUsername === activeUser.username;
+        const isAdmin = activeUser && ['dev', 'personal_duoc', 'lider_citt'].includes(activeUser.role);
+        if (!isAuthor && !isAdmin) {
+          return false;
+        }
+      }
+
       // Búsqueda por texto
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();

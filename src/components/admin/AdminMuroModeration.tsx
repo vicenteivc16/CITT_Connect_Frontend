@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { CITT_CAMPUSES, getCampusBySlug } from '@/data/citt-catalog';
 import { SchoolBadge } from '@/components/RoleBadge';
+import { CittMemberProfile } from '@/types/citt';
+import { useCittNetwork } from '@/context/CittNetworkContext';
+import { logSupabaseAudit } from '@/lib/supabase/audit';
 
 export interface DispatchToModerate {
   id: string;
@@ -31,34 +34,83 @@ export interface DispatchToModerate {
   isPinned?: boolean;
 }
 
-const INITIAL_DISPATCHES: DispatchToModerate[] = [];
+interface AdminMuroModerationProps {
+  activeUser: CittMemberProfile;
+  selectedCampusSlug?: string;
+}
 
-export function AdminMuroModeration() {
-  const [dispatches, setDispatches] = useState<DispatchToModerate[]>(INITIAL_DISPATCHES);
+export function AdminMuroModeration({
+  activeUser,
+  selectedCampusSlug = 'nacional',
+}: AdminMuroModerationProps) {
+  const { posts, updatePost } = useCittNetwork();
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [filterCampus, setFilterCampus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPreview, setSelectedPreview] = useState<DispatchToModerate | null>(null);
 
-  const handleApprove = (id: string) => {
-    setDispatches((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: 'approved' } : d))
-    );
+  const dispatches: DispatchToModerate[] = posts.map((p) => ({
+    id: p.id,
+    title: p.title,
+    summary: p.subtitle || p.content.slice(0, 120),
+    authorName: p.authorName,
+    authorRole: p.authorRole,
+    campusSlug: p.campusSlug,
+    schoolSlug: 'informatica',
+    submittedAt: p.createdAt,
+    status: p.status || 'approved',
+    isPinned: Boolean(p.isLeadStory),
+  }));
+
+  const handleApprove = async (id: string) => {
+    updatePost(id, { status: 'approved' });
+    const target = dispatches.find((d) => d.id === id);
+    if (target) {
+      await logSupabaseAudit({
+        actionType: 'APROBACION_DESPACHO',
+        title: `Despacho aprobado: ${target.title} (Sede: ${target.campusSlug})`,
+        actorUsername: activeUser.username,
+        actorName: activeUser.fullName,
+        actorRole: activeUser.role,
+        campusSlug: target.campusSlug,
+        metadata: { dispatchId: id },
+      });
+    }
   };
 
-  const handleReject = (id: string) => {
-    setDispatches((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: 'rejected', isPinned: false } : d))
-    );
+  const handleReject = async (id: string) => {
+    updatePost(id, { status: 'rejected', isLeadStory: false });
+    const target = dispatches.find((d) => d.id === id);
+    if (target) {
+      await logSupabaseAudit({
+        actionType: 'RECHAZO_DESPACHO',
+        title: `Despacho rechazado: ${target.title} (Sede: ${target.campusSlug})`,
+        actorUsername: activeUser.username,
+        actorName: activeUser.fullName,
+        actorRole: activeUser.role,
+        campusSlug: target.campusSlug,
+        metadata: { dispatchId: id },
+      });
+    }
   };
 
   const handleTogglePin = (id: string) => {
-    setDispatches((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, isPinned: !d.isPinned } : d))
-    );
+    const target = dispatches.find((d) => d.id === id);
+    if (target) {
+      updatePost(id, { isLeadStory: !target.isPinned });
+    }
   };
 
+  // Aislamiento por Sede / Tenant
+  const isDev = activeUser.role === 'dev';
+  const effectiveTenantSlug = !isDev
+    ? activeUser.campusSlug
+    : selectedCampusSlug && selectedCampusSlug !== 'nacional'
+    ? selectedCampusSlug
+    : null;
+
   const filteredDispatches = dispatches.filter((d) => {
+    if (effectiveTenantSlug && d.campusSlug !== effectiveTenantSlug) return false;
     if (filterStatus !== 'all' && d.status !== filterStatus) return false;
     if (filterCampus !== 'all' && d.campusSlug !== filterCampus) return false;
     if (searchQuery) {

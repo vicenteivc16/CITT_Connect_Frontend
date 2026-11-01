@@ -29,6 +29,7 @@ export type AdminModuleTab =
   | 'bitacora'
   | 'calendario'
   | 'proyectos'
+  | 'actividades'
   | 'muro'
   | 'ecosistema';
 
@@ -39,6 +40,7 @@ interface AdminSidebarNavProps {
   pendingPostsCount: number;
   pendingProjectsCount: number;
   pendingBookingsCount: number;
+  pendingActivitiesCount?: number;
 }
 
 export function AdminSidebarNav({
@@ -48,6 +50,7 @@ export function AdminSidebarNav({
   pendingPostsCount,
   pendingProjectsCount,
   pendingBookingsCount,
+  pendingActivitiesCount = 0,
 }: AdminSidebarNavProps) {
   const isCoreDev = activeUser.role === 'dev';
 
@@ -100,6 +103,14 @@ export function AdminSidebarNav({
       icon: FolderGit2,
       badgeCount: pendingProjectsCount,
       badgeColor: '#FFB800',
+    },
+    {
+      id: 'actividades',
+      label: 'Talleres & Actividades',
+      sublabel: 'Validación de convocatorias',
+      icon: Sparkles,
+      badgeCount: pendingActivitiesCount,
+      badgeColor: '#43B02A',
     },
     {
       id: 'muro',

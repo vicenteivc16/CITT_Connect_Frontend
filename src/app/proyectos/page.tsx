@@ -107,6 +107,15 @@ export default function ProjectsShowcasePage() {
   // Lógica de Filtrado Multicriterio
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
+      // Filtrar proyectos aún en etapa de idea/curaduría inicial para público general
+      if (project.status === 'idea') {
+        const isAuthor = activeUser?.username && project.leadUsername === activeUser.username;
+        const isPrivileged = activeUser && ['dev', 'personal_duoc', 'lider_citt'].includes(activeUser.role);
+        if (!isAuthor && !isPrivileged) {
+          return false;
+        }
+      }
+
       // Filtro por Tab Principal
       if (activeTab === 'ayuda' && !project.lookingForCollaborators) return false;
       if (activeTab === 'iniciativas' && project.lookingForCollaborators) return false;
@@ -193,6 +202,12 @@ export default function ProjectsShowcasePage() {
     setActiveTab('todos');
   };
 
+  const canCreateProject = Boolean(
+    isAuthenticated &&
+      activeUser &&
+      ['dev', 'personal_duoc', 'consejero_carrera', 'lider_citt'].includes(activeUser.role)
+  );
+
   return (
     <div className="space-y-8 pb-12">
       {/* 1. CABECERA & HERO DE PROYECTOS */}
@@ -213,14 +228,16 @@ export default function ProjectsShowcasePage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setCreateModalOpen(true)}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#FFB800] px-5 py-3 text-xs font-black text-[#1A1A1A] shadow-md transition hover:bg-[#ffc633] active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Publicar Proyecto</span>
-          </button>
+          {canCreateProject && (
+            <button
+              type="button"
+              onClick={() => setCreateModalOpen(true)}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#FFB800] px-5 py-3 text-xs font-black text-[#1A1A1A] shadow-md transition hover:bg-[#ffc633] active:scale-95"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Publicar Proyecto</span>
+            </button>
+          )}
         </div>
 
         {/* 3 Pasos CITT */}

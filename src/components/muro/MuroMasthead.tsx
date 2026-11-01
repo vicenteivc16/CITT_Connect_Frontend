@@ -6,9 +6,14 @@ import { Flame, Plus, ShieldCheck } from 'lucide-react';
 interface MuroMastheadProps {
   onOpenCompose: () => void;
   tickerHeadlines: string[];
+  canCompose?: boolean;
 }
 
-export function MuroMasthead({ onOpenCompose, tickerHeadlines }: MuroMastheadProps) {
+export function MuroMasthead({
+  onOpenCompose,
+  tickerHeadlines,
+  canCompose = false,
+}: MuroMastheadProps) {
   return (
     <header className="rounded-3xl border border-theme bg-theme-surface p-6 sm:p-8 shadow-theme-card text-center space-y-5">
       {/* Fila Superior: Fechador Oficial, Telemetría y Botón de Despacho */}
@@ -31,14 +36,16 @@ export function MuroMasthead({ onOpenCompose, tickerHeadlines }: MuroMastheadPro
           <span className="hidden lg:inline-block text-[11px] text-theme-secondary/80">
             Información 100% en Español
           </span>
-          <button
-            type="button"
-            onClick={onOpenCompose}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#FFB800] px-3.5 py-1.5 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633] active:scale-95"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Redactar Despacho / Noticia</span>
-          </button>
+          {canCompose && (
+            <button
+              type="button"
+              onClick={onOpenCompose}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FFB800] px-3.5 py-1.5 text-xs font-black text-[#1A1A1A] shadow-sm transition hover:bg-[#ffc633] active:scale-95"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Redactar Despacho / Noticia</span>
+            </button>
+          )}
         </div>
       </div>
 

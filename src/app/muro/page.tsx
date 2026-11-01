@@ -174,9 +174,12 @@ export default function NationalGazettePage() {
     });
   }, [newsArticles, activeDesk, searchQuery]);
 
-  // Posts de la comunidad filtrados
+  // Posts de la comunidad filtrados (Solo despachos aprobados públicamente)
   const communityPosts = useMemo(() => {
     return posts.filter((p) => {
+      if (p.status === 'pending') {
+        return false;
+      }
       if (selectedCampus !== 'todas' && p.campusSlug !== selectedCampus) {
         return false;
       }
@@ -184,7 +187,13 @@ export default function NationalGazettePage() {
     });
   }, [posts, selectedCampus]);
 
-  // Enviar nuevo despacho
+  const canComposeDispatch = Boolean(
+    isAuthenticated &&
+      activeUser &&
+      ['dev', 'personal_duoc', 'consejero_carrera', 'lider_citt'].includes(activeUser.role)
+  );
+
+  // Enviar nuevo despacho a moderación de sede
   const handleDispatchSubmit = (dispatchData: {
     title: string;
     subtitle?: string;
@@ -195,14 +204,15 @@ export default function NationalGazettePage() {
   }) => {
     addPost({
       ...dispatchData,
+      status: 'pending',
       authorName: activeUser.fullName,
       authorUsername: activeUser.username,
       authorRole: activeUser.role,
       authorOccupation: activeUser.currentOccupation || 'Miembro CITT',
     });
 
-    setStatusMessage('¡Despacho de sede publicado exitosamente en la Gaceta CITT!');
-    setTimeout(() => setStatusMessage(null), 4000);
+    setStatusMessage('¡Despacho enviado a moderación interna de sede! Será evaluado antes de su publicación.');
+    setTimeout(() => setStatusMessage(null), 5000);
   };
 
   return (
@@ -215,6 +225,7 @@ export default function NationalGazettePage() {
         <MuroMasthead
           onOpenCompose={() => setComposeModalOpen(true)}
           tickerHeadlines={tickerHeadlines}
+          canCompose={canComposeDispatch}
         />
 
         {/* Alerta de Publicación Exitosa */}

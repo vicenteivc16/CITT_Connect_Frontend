@@ -58,6 +58,7 @@ export async function logAuditEvent(entry: {
   actionType: string;
   title: string;
   details?: Record<string, any>;
+  metadata?: Record<string, any>;
 }): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
 
@@ -69,7 +70,7 @@ export async function logAuditEvent(entry: {
       actor_role: entry.actorRole,
       action_type: entry.actionType,
       title: entry.title,
-      details: entry.details || {},
+      details: entry.details || entry.metadata || {},
     };
 
     const { error } = await supabase.from('audit_logs').insert(payload);
@@ -78,3 +79,6 @@ export async function logAuditEvent(entry: {
     return false;
   }
 }
+
+export const logSupabaseAudit = logAuditEvent;
+

@@ -15,6 +15,7 @@ import { CittMemberProfile } from '@/types/citt';
 import { getSupabaseProfiles } from '@/lib/supabase/profiles';
 import { getSupabaseReservations } from '@/lib/supabase/reservations';
 import { getSupabaseProjects } from '@/lib/supabase/projects';
+import { getSupabaseActivities } from '@/lib/supabase/activities';
 
 // Subcomponentes del Panel Interno
 import {
@@ -28,29 +29,42 @@ import { AdminAuditLogs } from '@/components/admin/AdminAuditLogs';
 import { AdminOverview } from '@/components/admin/AdminOverview';
 import { AdminMuroModeration } from '@/components/admin/AdminMuroModeration';
 import { AdminProjectsApproval } from '@/components/admin/AdminProjectsApproval';
+import { AdminActivitiesApproval } from '@/components/admin/AdminActivitiesApproval';
 import { AdminCalendarBookings } from '@/components/admin/AdminCalendarBookings';
 import { AdminModuleJiraPlaceholder } from '@/components/admin/AdminModuleJiraPlaceholder';
 
 export default function AdminControlPlanePage() {
-  const { activeUser, isAuthenticated } = useCittNetwork();
+  const { activeUser, isAuthenticated, posts } = useCittNetwork();
   const [activeTab, setActiveTab] = useState<AdminModuleTab>('overview');
   const [mounted, setMounted] = useState(false);
   const [selectedCampusSlug, setSelectedCampusSlug] = useState<string>('nacional');
   const [profilesList, setProfilesList] = useState<CittMemberProfile[]>([]);
   const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
   const [pendingProjectsCount, setPendingProjectsCount] = useState(0);
+  const [pendingActivitiesCount, setPendingActivitiesCount] = useState(0);
   const [pendingPostsCount, setPendingPostsCount] = useState(0);
 
   const refreshData = async () => {
-    const [list, rsvs, projs] = await Promise.all([
+    const [list, rsvs, projs, acts] = await Promise.all([
       getSupabaseProfiles(),
       getSupabaseReservations(),
       getSupabaseProjects(),
+      getSupabaseActivities(),
     ]);
     setProfilesList(list);
-    setPendingBookingsCount(rsvs.filter((r) => r.status.toUpperCase() === 'PENDING').length);
-    setPendingProjectsCount(projs.filter((p) => p.status === 'idea').length);
-    setPendingPostsCount(0);
+
+    const isDev = activeUser?.role === 'dev';
+    const tenantSlug = !isDev ? activeUser?.campusSlug : null;
+
+    const rsvFilter = tenantSlug ? rsvs.filter((r) => r.campus === tenantSlug) : rsvs;
+    const projFilter = tenantSlug ? projs.filter((p) => p.originCampusSlug === tenantSlug) : projs;
+    const actFilter = tenantSlug ? acts.filter((a) => a.campusSlug === tenantSlug) : acts;
+    const postFilter = tenantSlug ? posts.filter((p) => p.campusSlug === tenantSlug) : posts;
+
+    setPendingBookingsCount(rsvFilter.filter((r) => r.status.toUpperCase() === 'PENDING').length);
+    setPendingProjectsCount(projFilter.filter((p) => p.status === 'idea').length);
+    setPendingActivitiesCount(actFilter.filter((a) => a.status === 'en_espera').length);
+    setPendingPostsCount(postFilter.filter((p) => p.status === 'pending').length);
   };
 
   useEffect(() => {
@@ -166,6 +180,7 @@ export default function AdminControlPlanePage() {
           pendingPostsCount={pendingPostsCount}
           pendingProjectsCount={pendingProjectsCount}
           pendingBookingsCount={pendingBookingsCount}
+          pendingActivitiesCount={pendingActivitiesCount}
         />
 
         {/* Contenedor del Módulo Activo */}
@@ -206,9 +221,26 @@ export default function AdminControlPlanePage() {
             <AdminCalendarBookings selectedCampusSlug={selectedCampusSlug} />
           )}
 
-          {activeTab === 'proyectos' && <AdminProjectsApproval />}
+          {activeTab === 'proyectos' && (
+            <AdminProjectsApproval
+              activeUser={activeUser}
+              selectedCampusSlug={selectedCampusSlug}
+            />
+          )}
 
-          {activeTab === 'muro' && <AdminMuroModeration />}
+          {activeTab === 'actividades' && (
+            <AdminActivitiesApproval
+              activeUser={activeUser}
+              selectedCampusSlug={selectedCampusSlug}
+            />
+          )}
+
+          {activeTab === 'muro' && (
+            <AdminMuroModeration
+              activeUser={activeUser}
+              selectedCampusSlug={selectedCampusSlug}
+            />
+          )}
 
           {activeTab === 'ecosistema' && <AdminModuleJiraPlaceholder />}
         </main>

@@ -114,7 +114,7 @@ export function CreateActivityModal({
       campusSlug,
       roomLocation,
       modality,
-      status: 'abierto',
+      status: 'en_espera',
       instructorName: activeUser.fullName,
       instructorRole: activeUser.role,
       instructorUsername: activeUser.username,

@@ -162,6 +162,7 @@ export interface CittFeedPost {
   createdAt: string;
   isLeadStory?: boolean;
   readTime?: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface CittBlogArticle {
@@ -217,7 +218,7 @@ export interface CittNfcTag {
 }
 
 export type ActivityModality = 'presencial' | 'hibrido' | 'online';
-export type ActivityStatus = 'abierto' | 'en_curso' | 'finalizado';
+export type ActivityStatus = 'abierto' | 'en_curso' | 'finalizado' | 'en_espera';
 
 export interface ActivityStudyMaterial {
   id: string;

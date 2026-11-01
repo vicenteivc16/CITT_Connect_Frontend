@@ -35,7 +35,9 @@ export function ComposeDispatchModal({
   const [postImageUrl, setPostImageUrl] = useState('');
   const [postCategory, setPostCategory] =
     useState<CittFeedPost['category']>('noticia_citt');
-  const [postCampus, setPostCampus] = useState('san-joaquin');
+  const [postCampus, setPostCampus] = useState(
+    activeUser?.campusSlug || 'san-bernardo'
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
