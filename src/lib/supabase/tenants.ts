@@ -4,6 +4,7 @@ export interface CampusRoom {
   id: string;
   campusSlug: string;
   roomName: string;
+  roomSlug: string;
   capacity: number;
   computersCount: number;
   hasMakerTools: boolean;
@@ -32,6 +33,7 @@ export async function getSupabaseCampusRooms(campusSlug?: string): Promise<Campu
       id: row.id,
       campusSlug: row.campus_slug,
       roomName: row.room_name,
+      roomSlug: row.room_slug || row.room_name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       capacity: row.capacity,
       computersCount: row.computers_count,
       hasMakerTools: row.has_maker_tools,
@@ -47,14 +49,19 @@ export async function getSupabaseCampusRooms(campusSlug?: string): Promise<Campu
 }
 
 export async function createSupabaseCampusRoom(
-  room: Omit<CampusRoom, 'id' | 'createdAt'>
+  room: Omit<CampusRoom, 'id' | 'createdAt' | 'roomSlug'> & { roomSlug?: string }
 ): Promise<CampusRoom | null> {
   if (!isSupabaseConfigured) return null;
 
   try {
+    const slug =
+      room.roomSlug?.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') ||
+      room.roomName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
     const payload = {
       campus_slug: room.campusSlug,
       room_name: room.roomName,
+      room_slug: slug,
       capacity: room.capacity,
       computers_count: room.computersCount,
       has_maker_tools: room.hasMakerTools,
@@ -73,6 +80,7 @@ export async function createSupabaseCampusRoom(
       id: data.id,
       campusSlug: data.campus_slug,
       roomName: data.room_name,
+      roomSlug: data.room_slug,
       capacity: data.capacity,
       computersCount: data.computers_count,
       hasMakerTools: data.has_maker_tools,
@@ -95,6 +103,17 @@ export async function toggleSupabaseRoomActive(roomId: string, isActive: boolean
       .from('campus_rooms')
       .update({ is_active: isActive })
       .eq('id', roomId);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteSupabaseCampusRoom(roomId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+
+  try {
+    const { error } = await supabase.from('campus_rooms').delete().eq('id', roomId);
     return !error;
   } catch {
     return false;

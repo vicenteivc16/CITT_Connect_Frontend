@@ -15,6 +15,7 @@ import {
   Lock,
   Mail,
   MapPin,
+  Monitor,
   Plus,
   QrCode,
   Radio,
@@ -43,6 +44,7 @@ import {
 import { AdminBlockDayModal } from './AdminBlockDayModal';
 import { AdminCittPassModal } from './AdminCittPassModal';
 import { AdminCasaCentralReportModal } from './AdminCasaCentralReportModal';
+import { AdminCalendarRooms } from './AdminCalendarRooms';
 
 export interface RoomReservation {
   id: string;
@@ -179,7 +181,7 @@ const INITIAL_BLOCKS: SupabaseAdminBlock[] = [
   },
 ];
 
-type SubTab = 'reservas' | 'historial' | 'bloqueos' | 'kpis';
+type SubTab = 'reservas' | 'historial' | 'bloqueos' | 'kpis' | 'salas';
 
 interface AdminCalendarBookingsProps {
   selectedCampusSlug?: string;
@@ -421,6 +423,19 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
         >
           <FileSpreadsheet className="h-4 w-4 text-[#43B02A]" />
           <span>KPIs & Rendición Casa Central</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSubTab('salas')}
+          className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition ${
+            subTab === 'salas'
+              ? 'bg-[#1A1A1A] text-white shadow-md'
+              : 'border border-theme bg-theme-surface text-theme-secondary hover:text-theme-primary'
+          }`}
+        >
+          <Monitor className="h-4 w-4 text-[#FFB800]" />
+          <span>Rutas & Salas Tótem (/[sede]/[sala])</span>
         </button>
       </div>
 
@@ -845,6 +860,14 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
             </div>
           </div>
         </div>
+      )}
+
+      {/* PESTAÑA 5: RUTAS Y SALAS TÓTEM (/[sede]/[sala]) */}
+      {subTab === 'salas' && (
+        <AdminCalendarRooms
+          selectedCampusSlug={selectedCampusSlug}
+          onNotice={showNotice}
+        />
       )}
 
       {/* Modales */}
