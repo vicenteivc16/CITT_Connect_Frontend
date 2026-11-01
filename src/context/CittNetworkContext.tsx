@@ -13,6 +13,7 @@ import {
   ProjectCollaborator,
 } from '@/types/citt';
 import {
+  GUEST_USER,
   INITIAL_ACTIVITIES,
   INITIAL_POSTS,
   INITIAL_PROFILES,
@@ -26,6 +27,11 @@ import {
   createSupabaseActivity,
 } from '@/lib/supabase/activities';
 import { getSupabaseProfiles } from '@/lib/supabase/profiles';
+import {
+  getSupabaseProjects,
+  createSupabaseProject,
+} from '@/lib/supabase/projects';
+import { supabase } from '@/lib/supabase/client';
 
 interface CittNetworkContextValue {
   profiles: CittMemberProfile[];
@@ -107,99 +113,18 @@ const CittNetworkContext = createContext<CittNetworkContextValue | undefined>(
 );
 
 const STORAGE_KEYS = {
-  PROFILES: 'citt_connect_profiles_v4',
-  PROJECTS: 'citt_connect_projects_v2',
-  POSTS: 'citt_connect_posts_v3',
-  ACTIVE_USERNAME: 'citt_connect_active_user_v3',
+  PROFILES: 'citt_connect_profiles_v5',
+  PROJECTS: 'citt_connect_projects_v5',
+  POSTS: 'citt_connect_posts_v5',
+  ACTIVE_USERNAME: 'citt_connect_active_user_v5',
   THEME: 'citt_connect_theme_v2',
-  CONNECTION_REQUESTS: 'citt_connect_connection_requests_v3',
-  NFC_TAGS: 'citt_connect_nfc_tags_v2',
-  ACTIVITIES: 'citt_connect_activities_v1',
+  CONNECTION_REQUESTS: 'citt_connect_connection_requests_v5',
+  NFC_TAGS: 'citt_connect_nfc_tags_v5',
+  ACTIVITIES: 'citt_connect_activities_v5',
 };
 
-const INITIAL_NFC_TAGS: CittNfcTag[] = [
-  {
-    tagUid: 'citt-pin-001',
-    status: 'active',
-    assignedUsername: 'vicente.vasquez',
-    batchLabel: 'Lote 3D Maipú 2026-A',
-  },
-  {
-    tagUid: 'pin-dev-01',
-    status: 'active',
-    assignedUsername: 'vicente.vasquez',
-    batchLabel: 'Lote 3D Maipú 2026-A',
-  },
-  {
-    tagUid: 'citt-pin-002',
-    status: 'active',
-    assignedUsername: 'valentina.araya',
-    batchLabel: 'Lote 3D San Joaquín 2026-A',
-  },
-  {
-    tagUid: 'pin-val-02',
-    status: 'active',
-    assignedUsername: 'valentina.araya',
-    batchLabel: 'Lote 3D San Joaquín 2026-A',
-  },
-  {
-    tagUid: 'citt-pin-003',
-    status: 'active',
-    assignedUsername: 'diego.retamal',
-    batchLabel: 'Lote 3D Maipú 2026-A',
-  },
-  {
-    tagUid: 'citt-pin-004',
-    status: 'active',
-    assignedUsername: 'camila.navarro',
-    batchLabel: 'Lote 3D Viña del Mar 2026-A',
-  },
-  {
-    tagUid: 'citt-pin-005',
-    status: 'active',
-    assignedUsername: 'matias.morales',
-    batchLabel: 'Lote 3D Plaza Vespucio 2026-A',
-  },
-  {
-    tagUid: 'citt-new-001',
-    status: 'unassigned',
-    batchLabel: 'Lote Virgen Impresión 3D CITT',
-  },
-  {
-    tagUid: 'citt-new-002',
-    status: 'unassigned',
-    batchLabel: 'Lote Virgen Impresión 3D CITT',
-  },
-  {
-    tagUid: 'citt-unassigned',
-    status: 'unassigned',
-    batchLabel: 'Lote Virgen Impresión 3D CITT',
-  },
-];
-
-const INITIAL_CONNECTION_REQUESTS: ConnectionRequest[] = [
-  {
-    id: 'req-init-1',
-    requesterId: 'usr-coordinador',
-    receiverId: 'usr-vicente',
-    status: 'accepted',
-    createdAt: '1 día atrás',
-  },
-  {
-    id: 'req-init-2',
-    requesterId: 'usr-consejera-diseno',
-    receiverId: 'usr-vicente',
-    status: 'accepted',
-    createdAt: '2 días atrás',
-  },
-  {
-    id: 'req-init-3',
-    requesterId: 'usr-lider-vina',
-    receiverId: 'usr-vicente',
-    status: 'pending',
-    createdAt: 'Hace 35 min',
-  },
-];
+const INITIAL_NFC_TAGS: CittNfcTag[] = [];
+const INITIAL_CONNECTION_REQUESTS: ConnectionRequest[] = [];
 
 export function CittNetworkProvider({
   children,
@@ -257,33 +182,53 @@ export function CittNetworkProvider({
     }
 
     // Sincronización en vivo con Supabase en la nube
+    getSupabaseProjects()
+      .then((supabasePrjs) => {
+        setProjects(supabasePrjs);
+        try {
+          localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(supabasePrjs));
+        } catch {}
+      })
+      .catch((err) => console.warn('Supabase projects sync fallback:', err));
+
     getSupabaseActivities()
       .then((supabaseActs) => {
-        if (supabaseActs && supabaseActs.length > 0) {
-          setActivities(supabaseActs);
-          try {
-            localStorage.setItem(
-              STORAGE_KEYS.ACTIVITIES,
-              JSON.stringify(supabaseActs)
-            );
-          } catch {}
-        }
+        setActivities(supabaseActs);
+        try {
+          localStorage.setItem(
+            STORAGE_KEYS.ACTIVITIES,
+            JSON.stringify(supabaseActs)
+          );
+        } catch {}
       })
       .catch((err) => console.warn('Supabase activities sync fallback:', err));
 
     getSupabaseProfiles()
       .then((supabaseProfiles) => {
-        if (supabaseProfiles && supabaseProfiles.length > 0) {
-          setProfiles(supabaseProfiles);
-          try {
-            localStorage.setItem(
-              STORAGE_KEYS.PROFILES,
-              JSON.stringify(supabaseProfiles)
-            );
-          } catch {}
-        }
+        setProfiles(supabaseProfiles);
+        try {
+          localStorage.setItem(
+            STORAGE_KEYS.PROFILES,
+            JSON.stringify(supabaseProfiles)
+          );
+        } catch {}
       })
       .catch((err) => console.warn('Supabase profiles sync fallback:', err));
+
+    // Sincronizar sesión activa de Supabase Auth
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const username =
+          session.user.user_metadata?.username ||
+          session.user.email?.split('@')[0];
+        if (username) {
+          setActiveUsername(username);
+          try {
+            localStorage.setItem(STORAGE_KEYS.ACTIVE_USERNAME, username);
+          } catch {}
+        }
+      }
+    }).catch(() => {});
   }, []);
 
   const themeTokens = CITT_THEMES[theme];
@@ -336,8 +281,10 @@ export function CittNetworkProvider({
     });
   };
 
-  const activeUser =
-    profiles.find((p) => p.username === activeUsername) || profiles[0];
+  const activeUser: CittMemberProfile =
+    (activeUsername ? profiles.find((p) => p.username === activeUsername) : null) ||
+    profiles[0] ||
+    GUEST_USER;
 
   // Helper to persist requests
   const persistConnectionRequests = (updated: ConnectionRequest[]) => {
@@ -605,6 +552,13 @@ export function CittNetworkProvider({
       }
       return true;
     }
+    if (clean === 'vice.vasca' || clean === 'vice.vasca@cittconnect.cl') {
+      setActiveUsername('vice.vasca');
+      try {
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_USERNAME, 'vice.vasca');
+      } catch {}
+      return true;
+    }
     return false;
   };
 
@@ -615,9 +569,11 @@ export function CittNetworkProvider({
     } catch {
       // ignore
     }
+    supabase.auth.signOut().catch(() => {});
   };
 
   const addProject = (projectData: Omit<CittProject, 'id' | 'createdAt'>) => {
+    createSupabaseProject(projectData).catch((err) => console.warn('Supabase create project err:', err));
     const newProject: CittProject = {
       ...projectData,
       id: `proj-${Date.now()}`,

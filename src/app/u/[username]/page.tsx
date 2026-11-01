@@ -32,14 +32,24 @@ export default function PublicMemberProfilePage() {
   const [copied, setCopied] = useState(false);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [originUrl, setOriginUrl] = useState('https://cittconnect.cl');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window !== 'undefined' && window.location.origin) {
       setOriginUrl(window.location.origin);
     }
   }, []);
 
   const member = profiles.find((p) => p.username === params.username);
+
+  if (!mounted || (profiles.length === 0 && !member)) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#FFB800] border-t-transparent" />
+      </div>
+    );
+  }
 
   if (!member) {
     return (

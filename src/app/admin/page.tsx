@@ -26,6 +26,19 @@ import { AdminModuleJiraPlaceholder } from '@/components/admin/AdminModuleJiraPl
 export default function AdminControlPlanePage() {
   const { activeUser, isAuthenticated } = useCittNetwork();
   const [activeTab, setActiveTab] = useState<AdminModuleTab>('overview');
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#FFB800] border-t-transparent" />
+      </div>
+    );
+  }
 
   // 1. Verificación de Autenticación
   if (!isAuthenticated) {
