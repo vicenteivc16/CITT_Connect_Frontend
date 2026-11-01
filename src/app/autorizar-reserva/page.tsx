@@ -23,6 +23,7 @@ import {
   Cpu,
   LogIn,
 } from 'lucide-react';
+import { createSupabaseReservation } from '@/lib/supabase/reservations';
 
 function AutorizarReservaContent() {
   const searchParams = useSearchParams();
@@ -100,6 +101,27 @@ function AutorizarReservaContent() {
 
       currentBookings.unshift(newBooking);
       localStorage.setItem('citt_admin_bookings', JSON.stringify(currentBookings));
+
+      // Persistir reserva en Supabase
+      createSupabaseReservation({
+        room: roomParam,
+        campus: campusParam,
+        inChargeName: activeUser.fullName,
+        inChargeEmail: activeUser.email,
+        inChargeRole: activeUser.role,
+        school: school?.name || activeUser.careerTitle,
+        date: dateParam,
+        timeSlot: `${startTime} - ${parseInt(startTime.split(':')[0], 10) + parseInt(duration, 10) / 60}:00`,
+        purpose: activityName,
+        attendees: attendeesCount,
+        requiresComputers,
+        status: 'CONFIRMED',
+        source: 'TOTEM_QR',
+        totemToken: token,
+        horasCitt: parseInt(duration, 10) === 120 ? '2.0 hrs' : '1.0 hr',
+        checkedIn: false,
+        applicantUsername: activeUser.username,
+      }).catch((err) => console.warn('Supabase reservation sync:', err));
 
       // Simular delay de firma criptográfica CITT Zero-Trust
       await new Promise((resolve) => setTimeout(resolve, 800));

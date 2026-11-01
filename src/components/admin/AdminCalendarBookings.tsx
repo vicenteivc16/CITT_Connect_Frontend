@@ -1,26 +1,47 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   AlertTriangle,
   Calendar,
   Check,
   CheckCircle2,
   Clock,
+  Download,
+  FileSpreadsheet,
+  FileText,
   Laptop,
+  Lock,
+  Mail,
   MapPin,
+  Plus,
   QrCode,
   Radio,
   RotateCcw,
   Search,
+  Send,
   ShieldCheck,
   Sparkles,
+  Trash2,
+  User,
   Users,
   X,
   XCircle,
 } from 'lucide-react';
 import { RoleBadge } from '@/components/RoleBadge';
 import { CittRole } from '@/types/citt';
+import {
+  getSupabaseReservations,
+  getSupabaseAdminBlocks,
+  deleteSupabaseAdminBlock,
+  updateSupabaseReservation,
+  toggleCheckInSupabaseReservation,
+  SupabaseAdminBlock,
+} from '@/lib/supabase/reservations';
+import { AdminBlockDayModal } from './AdminBlockDayModal';
+import { AdminCittPassModal } from './AdminCittPassModal';
+import { AdminCasaCentralReportModal } from './AdminCasaCentralReportModal';
 
 export interface RoomReservation {
   id: string;
@@ -29,8 +50,11 @@ export interface RoomReservation {
   workshopTitle: string;
   applicantName: string;
   applicantUsername: string;
+  applicantEmail?: string;
+  applicantAvatarUrl?: string;
   applicantRole: CittRole;
   career: string;
+  schoolName?: string;
   dateStr: string;
   startTime: string;
   endTime: string;
@@ -38,6 +62,9 @@ export interface RoomReservation {
   requiresComputers: boolean;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ATTENDED' | 'NO_SHOW';
   cittHoursGranted: number;
+  cittPassCode?: string;
+  cittPassUrl?: string;
+  cittPassSentAt?: string;
 }
 
 const INITIAL_RESERVATIONS: RoomReservation[] = [
@@ -47,16 +74,21 @@ const INITIAL_RESERVATIONS: RoomReservation[] = [
     campusName: 'San Bernardo',
     workshopTitle: 'Taller de Prototipado IoT y Sensores Agrícolas',
     applicantName: 'Vicente Vásquez',
-    applicantUsername: 'vicente-vasquez',
-    applicantRole: 'lider_citt',
+    applicantUsername: 'vicente.vasquez',
+    applicantEmail: 'vi.vasquezc@duocuc.cl',
+    applicantAvatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=600&q=80',
+    applicantRole: 'dev',
     career: 'Ingeniería en Informática',
-    dateStr: 'Hoy, 31 Octubre',
+    schoolName: 'Escuela de Informática y Telecomunicaciones',
+    dateStr: '2026-10-31',
     startTime: '10:00',
     endTime: '12:00',
     attendeesCount: 6,
     requiresComputers: true,
     status: 'APPROVED',
     cittHoursGranted: 2,
+    cittPassCode: 'CITTPASS-RES101-2026',
+    cittPassSentAt: '2026-10-31T10:05:00Z',
   },
   {
     id: 'res-102',
@@ -65,9 +97,11 @@ const INITIAL_RESERVATIONS: RoomReservation[] = [
     workshopTitle: 'Sesión de Programación de Microcontroladores ESP32',
     applicantName: 'Matías Alarcón',
     applicantUsername: 'matias-alarcon',
+    applicantEmail: 'm.alarcon@duocuc.cl',
     applicantRole: 'usuario_citt',
     career: 'Automatización y Robótica',
-    dateStr: 'Hoy, 31 Octubre',
+    schoolName: 'Escuela de Ingeniería',
+    dateStr: '2026-10-31',
     startTime: '14:30',
     endTime: '16:00',
     attendeesCount: 4,
@@ -82,15 +116,19 @@ const INITIAL_RESERVATIONS: RoomReservation[] = [
     workshopTitle: 'Mesa de Trabajo: Gemelos Digitales Portuarios',
     applicantName: 'Ignacio Sepúlveda',
     applicantUsername: 'ignacio-sepulveda',
+    applicantEmail: 'i.sepulveda@duocuc.cl',
     applicantRole: 'lider_citt',
     career: 'Ingeniería en Informática',
-    dateStr: 'Lunes, 02 Noviembre',
+    schoolName: 'Escuela de Informática y Telecomunicaciones',
+    dateStr: '2026-11-02',
     startTime: '11:00',
     endTime: '13:00',
     attendeesCount: 8,
     requiresComputers: false,
     status: 'APPROVED',
     cittHoursGranted: 2,
+    cittPassCode: 'CITTPASS-RES103-2026',
+    cittPassSentAt: '2026-10-30T15:20:00Z',
   },
   {
     id: 'res-104',
@@ -99,60 +137,160 @@ const INITIAL_RESERVATIONS: RoomReservation[] = [
     workshopTitle: 'Pruebas de Ciberseguridad en Redes Industriales',
     applicantName: 'Javier Morales',
     applicantUsername: 'javier-morales',
+    applicantEmail: 'j.morales@duocuc.cl',
     applicantRole: 'usuario_citt',
     career: 'Ingeniería en Conectividad y Redes',
-    dateStr: 'Ayer',
+    schoolName: 'Escuela de Informática y Telecomunicaciones',
+    dateStr: '2026-10-30',
     startTime: '16:00',
     endTime: '17:30',
     attendeesCount: 5,
     requiresComputers: true,
     status: 'ATTENDED',
     cittHoursGranted: 1.5,
+    cittPassCode: 'CITTPASS-RES104-2026',
+    cittPassSentAt: '2026-10-29T11:00:00Z',
   },
 ];
 
+const INITIAL_BLOCKS: SupabaseAdminBlock[] = [
+  {
+    id: 'blk-01',
+    campus: 'San Bernardo',
+    room: 'Sala 312 (Laboratorio CITT)',
+    blockDate: '2026-11-01',
+    startTime: '08:30',
+    endTime: '21:00',
+    reason: 'Feriado Nacional de Todos los Santos (Receso Duoc UC)',
+    createdBy: 'Coordinación Duoc UC',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'blk-02',
+    campus: 'San Bernardo',
+    room: 'Sala 312 (Laboratorio CITT)',
+    blockDate: '2026-11-05',
+    startTime: '08:30',
+    endTime: '13:00',
+    reason: 'Mantenimiento Preventivo e Inspección de Seguridad Kits IoT',
+    createdBy: 'Prof. Patricio González',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+type SubTab = 'reservas' | 'historial' | 'bloqueos' | 'kpis';
+
 export function AdminCalendarBookings() {
+  const [subTab, setSubTab] = useState<SubTab>('reservas');
   const [reservations, setReservations] = useState<RoomReservation[]>(INITIAL_RESERVATIONS);
+  const [adminBlocks, setAdminBlocks] = useState<SupabaseAdminBlock[]>(INITIAL_BLOCKS);
   const [filterRoom, setFilterRoom] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+
+  // Modales
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [cittPassTarget, setCittPassTarget] = useState<RoomReservation | null>(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+
+  // Sincronizar con Supabase
+  useEffect(() => {
+    let isMounted = true;
+    getSupabaseReservations().then((remoteRsvs) => {
+      if (!isMounted || remoteRsvs.length === 0) return;
+      const mapped: RoomReservation[] = remoteRsvs.map((r) => ({
+        id: r.id,
+        roomName: r.room,
+        campusName: r.campus,
+        workshopTitle: r.purpose,
+        applicantName: r.inChargeName,
+        applicantUsername: r.applicantUsername || r.inChargeEmail.split('@')[0],
+        applicantEmail: r.inChargeEmail,
+        applicantRole: (r.inChargeRole as CittRole) || 'usuario_citt',
+        career: r.school || 'Duoc UC',
+        schoolName: r.school,
+        dateStr: r.date,
+        startTime: r.timeSlot.split(' - ')[0] || '10:00',
+        endTime: r.timeSlot.split(' - ')[1] || '12:00',
+        attendeesCount: r.attendees,
+        requiresComputers: r.requiresComputers,
+        status: (r.status.toUpperCase() as any) || 'PENDING',
+        cittHoursGranted: parseFloat(r.horasCitt) || 1.5,
+        cittPassCode: r.cittPassCode,
+        cittPassUrl: r.cittPassUrl,
+        cittPassSentAt: r.cittPassSentAt,
+      }));
+      setReservations(mapped);
+    });
+
+    getSupabaseAdminBlocks().then((remoteBlocks) => {
+      if (!isMounted || remoteBlocks.length === 0) return;
+      setAdminBlocks(remoteBlocks);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const showNotice = (msg: string) => {
+    setFeedbackNotice(msg);
+    setTimeout(() => setFeedbackNotice(null), 3500);
+  };
 
   const handleApprove = (id: string) => {
     setReservations((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'APPROVED' } : r))
     );
-    showNotice('Reserva aprobada oficialmente. Notificación enviada al solicitante.');
+    updateSupabaseReservation(id, { status: 'APPROVED' });
+    showNotice('Reserva aprobada oficialmente. Puedes emitir el CITT PASS.');
   };
 
   const handleReject = (id: string) => {
     setReservations((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'REJECTED' } : r))
     );
-    showNotice('Reserva desestimada. Horario liberado en el calendario.');
+    updateSupabaseReservation(id, { status: 'REJECTED' });
+    showNotice('Reserva rechazada. Horario liberado en el calendario satélite.');
   };
 
   const handleMarkAttended = (id: string) => {
     setReservations((prev) =>
-      prev.map((r) => {
-        if (r.id === id) {
-          return { ...r, status: 'ATTENDED' };
-        }
-        return r;
-      })
+      prev.map((r) => (r.id === id ? { ...r, status: 'ATTENDED' } : r))
     );
-    showNotice('Asistencia confirmada. Se acreditaron las Horas CITT al perfil.');
+    toggleCheckInSupabaseReservation(id, true);
+    showNotice('Asistencia presencial verificada. Horas CITT acreditadas al perfil.');
   };
 
   const handleMarkNoShow = (id: string) => {
     setReservations((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'NO_SHOW' } : r))
     );
+    updateSupabaseReservation(id, { status: 'NO_SHOW', checkedIn: false });
     showNotice('Inasistencia registrada (No-Show). Se aplica suspensión preventiva temporal.');
   };
 
-  const showNotice = (msg: string) => {
-    setFeedbackNotice(msg);
-    setTimeout(() => setFeedbackNotice(null), 3000);
+  const handleDeleteBlock = async (blockId: string) => {
+    setAdminBlocks((prev) => prev.filter((b) => b.id !== blockId));
+    await deleteSupabaseAdminBlock(blockId);
+    showNotice('Bloqueo eliminado. Sala liberada para reservas en el calendario.');
+  };
+
+  const handlePassDispatched = (resId: string, passCode: string, passUrl?: string) => {
+    setReservations((prev) =>
+      prev.map((r) =>
+        r.id === resId
+          ? {
+              ...r,
+              cittPassCode: passCode,
+              cittPassUrl: passUrl,
+              cittPassSentAt: new Date().toISOString(),
+              status: 'APPROVED',
+            }
+          : r
+      )
+    );
+    showNotice(`¡CITT PASS [${passCode}] despachado por correo al solicitante!`);
   };
 
   const pendingCount = reservations.filter((r) => r.status === 'PENDING').length;
@@ -173,19 +311,31 @@ export function AdminCalendarBookings() {
             <span>Módulo Integrado: Calendario & Salas CITT</span>
           </span>
           <h1 className="text-2xl font-black tracking-tight text-theme-primary mt-2">
-            Administración de Salas & Tótems de Acceso
+            Administración Centralizada de Salas & Tótem
           </h1>
           <p className="text-xs text-theme-secondary mt-1 max-w-2xl">
-            Gestiona la disponibilidad de salas de laboratorio, valida solicitudes de reserva, monitorea los tótems QR de acceso físico y acredita Horas CITT por asistencia.
+            Gestiona la agenda satélite del Calendario CITT, bloquea días por mantenimiento, audita el historial de reservas con perfiles oficiales y despacha el CITT PASS por correo para Casa Central.
           </p>
         </div>
 
-        {/* Badge Tótem Activo */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-2xl border border-[#43B02A]/40 bg-[#43B02A]/10 px-3.5 py-2 text-xs font-bold text-[#43B02A]">
-            <span className="h-2 w-2 rounded-full bg-[#43B02A] animate-pulse" />
-            <span>Tótem Sala 312 En Línea (Zero-Trust)</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setBlockModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-xs font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
+          >
+            <Lock className="h-3.5 w-3.5" />
+            <span>Bloquear Día / Sala</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setReportModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#43B02A] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#3ba024]"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            <span>Reportes Casa Central</span>
+          </button>
         </div>
       </div>
 
@@ -197,249 +347,511 @@ export function AdminCalendarBookings() {
         </div>
       )}
 
-      {/* Tarjeta de Control del Tótem QR (Zero-Trust Session Monitor) */}
-      <div className="rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-theme pb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FFB800] text-[#1A1A1A] shadow-sm">
-              <QrCode className="h-5 w-5" />
+      {/* Sub-Navegación de Pestañas */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-theme pb-2">
+        <button
+          type="button"
+          onClick={() => setSubTab('reservas')}
+          className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition ${
+            subTab === 'reservas'
+              ? 'bg-[#1A1A1A] text-white shadow-md'
+              : 'border border-theme bg-theme-surface text-theme-secondary hover:text-theme-primary'
+          }`}
+        >
+          <Calendar className="h-4 w-4 text-[#FFB800]" />
+          <span>Reservas Activas</span>
+          {pendingCount > 0 && (
+            <span className="rounded-full bg-[#FFB800] px-2 py-0.5 text-[10px] font-black text-[#1A1A1A]">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSubTab('historial')}
+          className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition ${
+            subTab === 'historial'
+              ? 'bg-[#1A1A1A] text-white shadow-md'
+              : 'border border-theme bg-theme-surface text-theme-secondary hover:text-theme-primary'
+          }`}
+        >
+          <Users className="h-4 w-4 text-[#307FE2]" />
+          <span>Historial & Perfiles de Usuario ({reservations.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSubTab('bloqueos')}
+          className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition ${
+            subTab === 'bloqueos'
+              ? 'bg-[#1A1A1A] text-white shadow-md'
+              : 'border border-theme bg-theme-surface text-theme-secondary hover:text-theme-primary'
+          }`}
+        >
+          <Lock className="h-4 w-4 text-red-500" />
+          <span>Días Bloqueados ({adminBlocks.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSubTab('kpis')}
+          className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition ${
+            subTab === 'kpis'
+              ? 'bg-[#1A1A1A] text-white shadow-md'
+              : 'border border-theme bg-theme-surface text-theme-secondary hover:text-theme-primary'
+          }`}
+        >
+          <FileSpreadsheet className="h-4 w-4 text-[#43B02A]" />
+          <span>KPIs & Rendición Casa Central</span>
+        </button>
+      </div>
+
+      {/* PESTAÑA 1: RESERVAS ACTIVAS */}
+      {subTab === 'reservas' && (
+        <div className="space-y-4">
+          {/* Barra de Filtros */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-theme bg-theme-subtle p-3.5">
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { id: 'all', label: 'Todas' },
+                { id: 'PENDING', label: `Pendientes (${pendingCount})` },
+                { id: 'APPROVED', label: 'Aprobadas' },
+                { id: 'ATTENDED', label: 'Asistidas' },
+                { id: 'NO_SHOW', label: 'Inasistencias' },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFilterStatus(item.id)}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                    filterStatus === item.id
+                      ? 'bg-[#FFB800] text-[#1A1A1A] shadow-sm'
+                      : 'bg-theme-surface border border-theme text-theme-secondary hover:text-theme-primary'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
+
+            <select
+              value={filterRoom}
+              onChange={(e) => setFilterRoom(e.target.value)}
+              className="rounded-xl border border-theme bg-theme-surface px-3 py-1.5 text-xs font-bold text-theme-primary focus:border-[#FFB800] focus:outline-none"
+            >
+              <option value="all">Todas las Sedes</option>
+              <option value="San Bernardo">Sede San Bernardo (Sala 312)</option>
+              <option value="San Joaquín">Sede San Joaquín (Lab Hardware)</option>
+            </select>
+          </div>
+
+          {/* Listado */}
+          <div className="space-y-3">
+            {filteredReservations.length === 0 ? (
+              <div className="rounded-3xl border border-theme bg-theme-surface p-12 text-center text-xs text-theme-secondary">
+                No hay reservas registradas bajo este filtro.
+              </div>
+            ) : (
+              filteredReservations.map((res) => (
+                <article
+                  key={res.id}
+                  className="rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card space-y-3 transition hover:shadow-md"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                          res.status === 'APPROVED'
+                            ? 'bg-[#43B02A]/15 text-[#43B02A]'
+                            : res.status === 'PENDING'
+                            ? 'bg-[#FFB800]/15 text-[#FFB800]'
+                            : res.status === 'ATTENDED'
+                            ? 'bg-[#307FE2]/15 text-[#307FE2]'
+                            : res.status === 'NO_SHOW'
+                            ? 'bg-red-500/15 text-red-500'
+                            : 'bg-theme-subtle text-theme-secondary'
+                        }`}
+                      >
+                        {res.status === 'APPROVED'
+                          ? '✓ Aprobada'
+                          : res.status === 'PENDING'
+                          ? '⏳ En Revisión'
+                          : res.status === 'ATTENDED'
+                          ? '✓ Asistencia Cumplida'
+                          : res.status === 'NO_SHOW'
+                          ? '✗ Inasistencia (No-Show)'
+                          : 'Rechazada'}
+                      </span>
+                      <span className="text-xs font-semibold text-theme-secondary">
+                        {res.roomName} · Sede {res.campusName}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs font-mono font-bold text-theme-primary">
+                      <Clock className="h-3.5 w-3.5 text-[#FFB800]" />
+                      <span>{res.dateStr} · {res.startTime} - {res.endTime}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-black text-theme-primary leading-snug">
+                      {res.workshopTitle}
+                    </h3>
+                    <p className="text-xs text-theme-secondary mt-1">
+                      Solicitante:{' '}
+                      <strong className="text-theme-primary">{res.applicantName}</strong> (
+                      {res.applicantEmail || `${res.applicantUsername}@duocuc.cl`}) · Carrera:{' '}
+                      <span className="text-theme-primary">{res.career}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-theme pt-3 text-xs">
+                    <div className="flex items-center gap-4 text-theme-secondary">
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3.5 w-3.5 text-[#307FE2]" />
+                        <span>Quórum: <strong>{res.attendeesCount} pers.</strong></span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Laptop className="h-3.5 w-3.5 text-[#43B02A]" />
+                        <span>PCs: <strong>{res.requiresComputers ? 'Sí' : 'No'}</strong></span>
+                      </span>
+                      {res.cittPassCode ? (
+                        <span className="flex items-center gap-1 font-mono font-bold text-[#FFB800]">
+                          <QrCode className="h-3.5 w-3.5" />
+                          <span>PASS: {res.cittPassCode}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-theme-secondary italic">
+                          Sin CITT PASS
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCittPassTarget(res)}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-[#FFB800]/40 bg-[#FFB800]/10 px-3 py-1.5 text-xs font-bold text-theme-primary hover:bg-[#FFB800] hover:text-[#1A1A1A] transition"
+                      >
+                        <QrCode className="h-3.5 w-3.5 text-[#FFB800]" />
+                        <span>{res.cittPassCode ? 'Reenviar CITT PASS' : 'Generar / Despachar PASS'}</span>
+                      </button>
+
+                      {res.status === 'PENDING' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleReject(res.id)}
+                            className="inline-flex items-center gap-1 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-500 hover:text-white transition"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            <span>Rechazar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApprove(res.id)}
+                            className="inline-flex items-center gap-1 rounded-xl bg-[#43B02A] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#3ba024] transition shadow-sm"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            <span>Aprobar</span>
+                          </button>
+                        </>
+                      )}
+
+                      {res.status === 'APPROVED' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleMarkNoShow(res.id)}
+                            className="inline-flex items-center gap-1 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-500 hover:text-white transition"
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            <span>No-Show</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMarkAttended(res.id)}
+                            className="inline-flex items-center gap-1 rounded-xl bg-[#307FE2] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#286cc0] transition shadow-sm"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Marcar Asistencia</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PESTAÑA 2: HISTORIAL CON PERFILES DE USUARIO */}
+      {subTab === 'historial' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
             <div>
               <h2 className="text-sm font-black text-theme-primary">
-                Monitor del Tótem de Acceso Físico
+                Trazabilidad Histórica de Usuarios en Salas CITT
               </h2>
               <p className="text-xs text-theme-secondary">
-                Sincronización en tiempo real con la pantalla exterior de la Sala CITT
+                Cada reserva queda vinculada al perfil institucional y credencial de CITT Connect
               </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="rounded-xl border border-theme bg-theme-subtle px-3 py-1.5 text-xs font-bold text-theme-primary">
-              Sala 312 · San Bernardo
-            </span>
-            <span className="rounded-xl bg-[#43B02A]/15 text-[#43B02A] px-3 py-1.5 text-xs font-bold">
-              Modo Kiosk Activo
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 text-xs">
-          <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 space-y-1">
-            <span className="text-theme-secondary text-[11px] font-bold block">
-              Mecanismo de Autenticación:
-            </span>
-            <p className="font-bold text-theme-primary flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-[#107C41]" />
-              <span>Pase QR CITT Connect (SSO)</span>
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 space-y-1">
-            <span className="text-theme-secondary text-[11px] font-bold block">
-              Tiempo de Validez por Sesión:
-            </span>
-            <p className="font-bold text-theme-primary flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-[#FFB800]" />
-              <span>10 Minutos (Auto-rotativo)</span>
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 space-y-1">
-            <span className="text-theme-secondary text-[11px] font-bold block">
-              Trazabilidad en Base Central:
-            </span>
-            <p className="font-bold text-theme-primary flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-[#307FE2]" />
-              <span>Identidad Verificada CITT</span>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Barra de Filtros */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-theme bg-theme-subtle p-3.5">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Status buttons */}
-          {[
-            { id: 'all', label: 'Todas' },
-            { id: 'PENDING', label: `Pendientes (${pendingCount})` },
-            { id: 'APPROVED', label: 'Aprobadas' },
-            { id: 'ATTENDED', label: 'Asistidas (Horas CITT)' },
-            { id: 'NO_SHOW', label: 'Inasistencias' },
-          ].map((item) => (
             <button
-              key={item.id}
               type="button"
-              onClick={() => setFilterStatus(item.id)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-                filterStatus === item.id
-                  ? 'bg-[#FFB800] text-[#1A1A1A] shadow-sm'
-                  : 'bg-theme-surface border border-theme text-theme-secondary hover:text-theme-primary'
-              }`}
+              onClick={() => setReportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-elevated px-3 py-1.5 text-xs font-bold text-theme-primary"
             >
-              {item.label}
+              <Download className="h-3.5 w-3.5" />
+              <span>Exportar Reporte</span>
             </button>
-          ))}
-        </div>
-
-        {/* Room selector */}
-        <select
-          value={filterRoom}
-          onChange={(e) => setFilterRoom(e.target.value)}
-          className="rounded-xl border border-theme bg-theme-surface px-3 py-1.5 text-xs font-bold text-theme-primary focus:border-[#FFB800] focus:outline-none"
-        >
-          <option value="all">Todas las Sedes con Sala CITT</option>
-          <option value="San Bernardo">Sede San Bernardo (Sala 312)</option>
-          <option value="San Joaquín">Sede San Joaquín (Lab Hardware)</option>
-        </select>
-      </div>
-
-      {/* Lista de Reservas de Sala */}
-      <div className="space-y-3">
-        {filteredReservations.length === 0 ? (
-          <div className="rounded-3xl border border-theme bg-theme-surface p-12 text-center text-xs text-theme-secondary">
-            No hay reservas registradas en este estado.
           </div>
-        ) : (
-          filteredReservations.map((res) => (
-            <article
-              key={res.id}
-              className="rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card space-y-3 transition hover:shadow-md"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
-                      res.status === 'APPROVED'
-                        ? 'bg-[#43B02A]/15 text-[#43B02A]'
-                        : res.status === 'PENDING'
-                        ? 'bg-[#FFB800]/15 text-[#FFB800]'
-                        : res.status === 'ATTENDED'
-                        ? 'bg-[#307FE2]/15 text-[#307FE2]'
-                        : res.status === 'NO_SHOW'
-                        ? 'bg-red-500/15 text-red-500'
-                        : 'bg-theme-subtle text-theme-secondary'
-                    }`}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {reservations.map((res) => (
+              <div
+                key={res.id}
+                className="rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card space-y-4"
+              >
+                {/* Perfil del Solicitante */}
+                <div className="flex items-center justify-between gap-3 border-b border-theme pb-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={res.applicantAvatarUrl || '/assets/citt-logo.webp'}
+                      alt={res.applicantName}
+                      className="h-10 w-10 rounded-2xl border border-[#FFB800] object-cover shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <Link
+                        href={`/u/${res.applicantUsername}`}
+                        className="truncate text-xs font-black text-theme-primary hover:underline block"
+                      >
+                        {res.applicantName}
+                      </Link>
+                      <p className="truncate text-[10px] text-theme-secondary">
+                        {res.applicantEmail || `${res.applicantUsername}@duocuc.cl`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <RoleBadge role={res.applicantRole} />
+                </div>
+
+                {/* Info de Reserva */}
+                <div className="space-y-2 text-xs">
+                  <div>
+                    <span className="font-bold text-theme-primary block">
+                      {res.workshopTitle}
+                    </span>
+                    <span className="text-[11px] text-theme-secondary">
+                      {res.schoolName || 'Escuela Duoc UC'} · Carrera: {res.career}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 rounded-xl bg-theme-subtle p-2.5 text-[11px]">
+                    <div>
+                      <span className="text-theme-secondary block">Fecha & Horario:</span>
+                      <strong className="text-theme-primary">
+                        {res.dateStr} ({res.startTime} - {res.endTime})
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-theme-secondary block">Espacio:</span>
+                      <strong className="text-theme-primary">{res.roomName}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer CITT PASS */}
+                <div className="flex items-center justify-between border-t border-theme pt-3 text-xs">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-theme-secondary block">CITT PASS Casa Central:</span>
+                    <span className="font-mono font-bold text-[#FFB800] text-[11px]">
+                      {res.cittPassCode || 'Pendiente de Emisión'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setCittPassTarget(res)}
+                    className="inline-flex items-center gap-1 rounded-xl bg-theme-elevated px-3 py-1.5 text-xs font-bold text-theme-primary hover:border-[#FFB800] border border-theme"
                   >
-                    {res.status === 'APPROVED'
-                      ? 'Reserva Aprobada'
-                      : res.status === 'PENDING'
-                      ? 'Pendiente de Aprobación'
-                      : res.status === 'ATTENDED'
-                      ? 'Asistencia Validada'
-                      : res.status === 'NO_SHOW'
-                      ? 'Inasistencia (No-Show)'
-                      : 'Rechazada'}
-                  </span>
-
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-theme-primary">
-                    <MapPin className="h-3 w-3 text-[#FFB800]" />
-                    <span>{res.roomName} — {res.campusName}</span>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs font-bold text-theme-primary">
-                  <Clock className="h-3.5 w-3.5 text-[#FFB800]" />
-                  <span>
-                    {res.dateStr} · {res.startTime} - {res.endTime}
-                  </span>
+                    <Mail className="h-3.5 w-3.5 text-[#307FE2]" />
+                    <span>{res.cittPassSentAt ? 'Reenviar' : 'Despachar'}</span>
+                  </button>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
 
+      {/* PESTAÑA 3: DÍAS BLOQUEADOS */}
+      {subTab === 'bloqueos' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+            <div>
+              <h2 className="text-sm font-black text-theme-primary">
+                Gestor de Días y Horarios Bloqueados
+              </h2>
+              <p className="text-xs text-theme-secondary">
+                Las salas bloqueadas no admitirán reservas en el tótem ni desde la aplicación externa
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBlockModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-red-500 px-3.5 py-2 text-xs font-bold text-white hover:bg-red-600 transition"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Nuevo Bloqueo de Sala</span>
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {adminBlocks.length === 0 ? (
+              <div className="rounded-3xl border border-theme bg-theme-surface p-12 text-center text-xs text-theme-secondary">
+                No hay bloqueos activos. Todas las salas están disponibles en el calendario.
+              </div>
+            ) : (
+              adminBlocks.map((block) => (
+                <div
+                  key={block.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-red-500/15 text-red-500">
+                      <Lock className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-red-500">
+                          {block.blockDate}
+                        </span>
+                        <span className="rounded-full bg-theme-subtle px-2 py-0.5 text-[10px] font-bold text-theme-primary">
+                          {block.startTime} - {block.endTime}
+                        </span>
+                        <span className="text-xs text-theme-secondary">
+                          {block.room} ({block.campus})
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-black text-theme-primary">
+                        {block.reason}
+                      </h4>
+                      <p className="text-[11px] text-theme-secondary">
+                        Registrado por: <strong>{block.createdBy}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBlock(block.id)}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-theme bg-theme-elevated px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-500 hover:text-white transition"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Desbloquear Sala</span>
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PESTAÑA 4: KPIS & CASA CENTRAL */}
+      {subTab === 'kpis' && (
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-theme pb-4">
               <div>
-                <h3 className="text-base font-black text-theme-primary">
-                  {res.workshopTitle}
+                <span className="text-[10px] font-bold tracking-widest text-[#43B02A] uppercase">
+                  Auditoría Curricular & Formación Maker
+                </span>
+                <h3 className="text-base font-black text-theme-primary mt-1">
+                  Indicadores de Rendición Exigidos por Casa Central
                 </h3>
-                <div className="flex flex-wrap items-center gap-4 text-xs text-theme-secondary mt-1">
-                  <span className="flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 text-[#307FE2]" />
-                    <span>{res.attendeesCount} participantes</span>
-                  </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReportModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#43B02A] px-4 py-2 text-xs font-bold text-white hover:bg-[#3ba024] transition shadow-sm"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Descargar Nómina Oficial Casa Central</span>
+              </button>
+            </div>
 
-                  {res.requiresComputers && (
-                    <span className="flex items-center gap-1.5 text-theme-primary font-semibold">
-                      <Laptop className="h-3.5 w-3.5 text-[#43B02A]" />
-                      <span>Requiere computadores del Lab</span>
-                    </span>
-                  )}
-
-                  <span className="font-semibold text-[#FFB800]">
-                    +{res.cittHoursGranted} Horas CITT de acreditación
-                  </span>
-                </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="rounded-2xl border border-theme bg-theme-subtle p-4 text-center">
+                <span className="text-xs text-theme-secondary font-medium block">
+                  Horas de Laboratorio
+                </span>
+                <span className="text-3xl font-black text-[#FFB800] mt-1 block">
+                  {reservations.reduce((acc, r) => acc + r.cittHoursGranted, 0)} hrs
+                </span>
+                <span className="text-[10px] text-theme-secondary">Acreditadas en el semestre</span>
               </div>
 
-              {/* Pie: Solicitante y Acciones de Aprobación / Asistencia */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-theme pt-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-theme-secondary">Solicitado por:</span>
-                  <strong className="text-theme-primary">
-                    {res.applicantName}
-                  </strong>
-                  <RoleBadge role={res.applicantRole} showTooltip={false} size="sm" />
-                  <span className="text-theme-secondary hidden sm:inline">
-                    · {res.career}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  {res.status === 'PENDING' && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleApprove(res.id)}
-                        className="inline-flex items-center gap-1 rounded-xl bg-[#43B02A] px-3 py-1.5 font-bold text-white transition hover:bg-[#389623]"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        <span>Aprobar Reserva</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleReject(res.id)}
-                        className="inline-flex items-center gap-1 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                        <span>Desestimar</span>
-                      </button>
-                    </>
-                  )}
-
-                  {res.status === 'APPROVED' && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleMarkAttended(res.id)}
-                        title="Acreditar horas CITT"
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#107C41] px-3 py-1.5 font-bold text-white transition hover:bg-[#0d6334]"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>Confirmar Asistencia</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleMarkNoShow(res.id)}
-                        title="Aplicar sanción por inasistencia"
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-subtle px-3 py-1.5 font-bold text-theme-secondary hover:text-red-500 transition"
-                      >
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        <span>No-Show</span>
-                      </button>
-                    </>
-                  )}
-
-                  {res.status === 'ATTENDED' && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#107C41]">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Horas acreditadas en CITT Connect</span>
-                    </span>
-                  )}
-                </div>
+              <div className="rounded-2xl border border-theme bg-theme-subtle p-4 text-center">
+                <span className="text-xs text-theme-secondary font-medium block">
+                  Estudiantes Impactados
+                </span>
+                <span className="text-3xl font-black text-[#307FE2] mt-1 block">
+                  {reservations.reduce((acc, r) => acc + r.attendeesCount, 0)}
+                </span>
+                <span className="text-[10px] text-theme-secondary">Alumnos en salas Duoc</span>
               </div>
-            </article>
-          ))
-        )}
-      </div>
+
+              <div className="rounded-2xl border border-theme bg-theme-subtle p-4 text-center">
+                <span className="text-xs text-theme-secondary font-medium block">
+                  Tasa de Asistencia
+                </span>
+                <span className="text-3xl font-black text-[#43B02A] mt-1 block">
+                  94.2%
+                </span>
+                <span className="text-[10px] text-theme-secondary">5.8% no-show preventivo</span>
+              </div>
+
+              <div className="rounded-2xl border border-theme bg-theme-subtle p-4 text-center">
+                <span className="text-xs text-theme-secondary font-medium block">
+                  Pases CITT PASS
+                </span>
+                <span className="text-3xl font-black text-theme-primary mt-1 block">
+                  {reservations.filter((r) => !!r.cittPassCode).length}
+                </span>
+                <span className="text-[10px] text-theme-secondary">Despachados a tiempo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modales */}
+      <AdminBlockDayModal
+        isOpen={blockModalOpen}
+        onClose={() => setBlockModalOpen(false)}
+        onBlockCreated={(block) => {
+          setAdminBlocks((prev) => [block, ...prev]);
+          showNotice(`¡Sala bloqueada para el ${block.blockDate}!`);
+        }}
+      />
+
+      <AdminCittPassModal
+        reservation={cittPassTarget}
+        isOpen={!!cittPassTarget}
+        onClose={() => setCittPassTarget(null)}
+        onPassDispatched={handlePassDispatched}
+      />
+
+      <AdminCasaCentralReportModal
+        reservations={reservations}
+        isOpen={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+      />
     </div>
   );
 }
