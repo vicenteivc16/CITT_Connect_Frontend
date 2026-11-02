@@ -17,6 +17,7 @@ import {
   Radio,
   Search,
   Sparkles,
+  Sliders,
   Trash2,
   Users,
   Wrench,
@@ -33,6 +34,7 @@ import {
 } from '@/lib/supabase/tenants';
 import { logAuditEvent } from '@/lib/supabase/audit';
 import { useCittNetwork } from '@/context/CittNetworkContext';
+import { AdminRoomConfigModal } from './AdminRoomConfigModal';
 
 interface AdminCalendarRoomsProps {
   selectedCampusSlug?: string;
@@ -49,6 +51,7 @@ export function AdminCalendarRooms({ selectedCampusSlug, onNotice }: AdminCalend
   // Modales
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [qrModalRoom, setQrModalRoom] = useState<CampusRoom | null>(null);
+  const [editingConfigRoom, setEditingConfigRoom] = useState<CampusRoom | null>(null);
 
   // Formulario de nueva sala
   const [newCampus, setNewCampus] = useState(
@@ -417,6 +420,16 @@ export function AdminCalendarRooms({ selectedCampusSlug, onNotice }: AdminCalend
                       <QrCode className="h-3 w-3 text-[#307FE2]" />
                       <span>Ver QR</span>
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEditingConfigRoom(room)}
+                      title="Personalizar Salvapantallas & Tótem"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-surface px-3 py-1.5 text-xs font-bold text-theme-secondary hover:text-[#FFB800] hover:border-[#FFB800]/50 transition"
+                    >
+                      <Sliders className="h-3 w-3 text-[#FFB800]" />
+                      <span>Personalizar</span>
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-1">
@@ -683,6 +696,21 @@ export function AdminCalendarRooms({ selectedCampusSlug, onNotice }: AdminCalend
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODAL: PERSONALIZAR TÓTEM & SALVAPANTALLAS */}
+      {editingConfigRoom && (
+        <AdminRoomConfigModal
+          room={editingConfigRoom}
+          campusName={getCampusBySlug(editingConfigRoom.campusSlug)?.name || editingConfigRoom.campusSlug}
+          onClose={() => setEditingConfigRoom(null)}
+          onSaved={(updated) => {
+            setRooms((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+            setEditingConfigRoom(null);
+          }}
+          onNotice={onNotice}
+          activeUser={activeUser}
+        />
       )}
     </div>
   );

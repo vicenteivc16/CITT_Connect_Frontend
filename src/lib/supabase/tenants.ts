@@ -1,5 +1,27 @@
 import { supabase, isSupabaseConfigured } from './client';
 
+export interface GalleryPhotoItem {
+  id: string;
+  title: string;
+  category: string;
+  src: string;
+  alt: string;
+}
+
+export interface RoomScreensaverConfig {
+  subtitle?: string;
+  description?: string;
+  secondaryDescription?: string;
+  floorLocation?: string;
+  equipmentSummary?: string;
+  heroImageUrl?: string;
+  tickerChips?: string[];
+  idleTimeoutSeconds?: number;
+  screensaverDurationSeconds?: number;
+  announcementBanner?: string;
+  galleryPhotos?: GalleryPhotoItem[];
+}
+
 export interface CampusRoom {
   id: string;
   campusSlug: string;
@@ -11,6 +33,7 @@ export interface CampusRoom {
   hasIotEquipment: boolean;
   isActive: boolean;
   totemToken?: string;
+  screensaverConfig?: RoomScreensaverConfig;
   createdAt: string;
 }
 
@@ -40,6 +63,7 @@ export async function getSupabaseCampusRooms(campusSlug?: string): Promise<Campu
       hasIotEquipment: row.has_iot_equipment,
       isActive: row.is_active,
       totemToken: row.totem_token,
+      screensaverConfig: row.screensaver_config || undefined,
       createdAt: row.created_at,
     }));
   } catch (err) {
@@ -49,7 +73,10 @@ export async function getSupabaseCampusRooms(campusSlug?: string): Promise<Campu
 }
 
 export async function createSupabaseCampusRoom(
-  room: Omit<CampusRoom, 'id' | 'createdAt' | 'roomSlug'> & { roomSlug?: string }
+  room: Omit<CampusRoom, 'id' | 'createdAt' | 'roomSlug'> & {
+    roomSlug?: string;
+    screensaverConfig?: RoomScreensaverConfig;
+  }
 ): Promise<CampusRoom | null> {
   if (!isSupabaseConfigured) return null;
 
@@ -68,6 +95,7 @@ export async function createSupabaseCampusRoom(
       has_iot_equipment: room.hasIotEquipment,
       is_active: room.isActive,
       totem_token: room.totemToken || `totem_${room.campusSlug}_${Date.now().toString(36)}`,
+      screensaver_config: room.screensaverConfig || {},
     };
 
     const { data, error } = await supabase.from('campus_rooms').insert(payload).select().single();
@@ -87,11 +115,38 @@ export async function createSupabaseCampusRoom(
       hasIotEquipment: data.has_iot_equipment,
       isActive: data.is_active,
       totemToken: data.totem_token,
+      screensaverConfig: data.screensaver_config || undefined,
       createdAt: data.created_at,
     };
   } catch (err) {
     console.error('Exception creating campus room:', err);
     return null;
+  }
+}
+
+export async function updateSupabaseCampusRoomConfig(
+  roomId: string,
+  screensaverConfig: RoomScreensaverConfig
+): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+
+  try {
+    const { error } = await supabase
+      .from('campus_rooms')
+      .update({
+        screensaver_config: screensaverConfig,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', roomId);
+
+    if (error) {
+      console.error('Error updating campus room screensaver config:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Exception updating campus room screensaver config:', err);
+    return false;
   }
 }
 
