@@ -11,7 +11,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { CittRole, DuocSchoolSlug } from '@/types/citt';
-import { getSchoolBySlug, ROLE_CONFIG } from '@/data/citt-catalog';
+import { getSchoolBySlug, getRoleConfig, normalizeCittRole } from '@/data/citt-catalog';
 import { useCittNetwork } from '@/context/CittNetworkContext';
 import { getSchoolChromaticPair } from '@/styles/themes';
 
@@ -30,21 +30,22 @@ export function RoleBadge({
   showTooltip = true,
   size = 'sm',
 }: {
-  role: CittRole;
+  role?: CittRole | string | null;
   showTooltip?: boolean;
   size?: 'sm' | 'md';
 }) {
   const { theme } = useCittNetwork();
-  const config = ROLE_CONFIG[role];
-  const Icon = ROLE_ICONS[role];
-  const isInstitutionalGold = role === 'personal_duoc';
+  const normalizedRole = normalizeCittRole(role);
+  const config = getRoleConfig(role);
+  const Icon = ROLE_ICONS[normalizedRole] || UserCheck;
+  const isInstitutionalGold = normalizedRole === 'personal_duoc';
 
   // In Light mode, non-gold roles use #1A1A1A or official high-contrast school/role accent for the icon
   const iconColor = isInstitutionalGold
     ? '#1A1A1A'
-    : theme === 'light' && config.accentHex === '#EEEEEE'
+    : theme === 'light' && (config.accentHex === '#EEEEEE' || !config.accentHex)
     ? '#1A1A1A'
-    : config.accentHex;
+    : config.accentHex || '#EEEEEE';
 
   const badge = (
     <span

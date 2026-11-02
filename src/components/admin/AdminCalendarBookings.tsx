@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { RoleBadge } from '@/components/RoleBadge';
 import { CittRole } from '@/types/citt';
-import { CITT_CAMPUSES, getCampusBySlug } from '@/data/citt-catalog';
+import { CITT_CAMPUSES, getCampusBySlug, normalizeCittRole } from '@/data/citt-catalog';
 import {
   getSupabaseReservations,
   getSupabaseAdminBlocks,
@@ -106,7 +106,7 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
         applicantName: r.inChargeName,
         applicantUsername: r.applicantUsername || r.inChargeEmail.split('@')[0],
         applicantEmail: r.inChargeEmail,
-        applicantRole: (r.inChargeRole as CittRole) || 'usuario_citt',
+        applicantRole: normalizeCittRole(r.inChargeRole),
         career: r.school || 'Duoc UC',
         schoolName: r.school,
         dateStr: r.date,

@@ -55,19 +55,18 @@ export const CITT_BANNER_PRESETS: CittBannerPreset[] = [
   },
 ];
 
-export const ROLE_CONFIG: Record<
-  CittRole,
-  {
-    label: string;
-    shortLabel: string;
-    authorityRank: number;
-    description: string;
-    accentHex: string;
-    badgeBg: string;
-    badgeText: string;
-    badgeBorder: string;
-  }
-> = {
+export interface RoleConfigItem {
+  label: string;
+  shortLabel: string;
+  authorityRank: number;
+  description: string;
+  accentHex: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+}
+
+export const ROLE_CONFIG: Record<CittRole, RoleConfigItem> = {
   personal_duoc: {
     label: 'Personal Duoc UC',
     shortLabel: 'Personal Duoc',
@@ -135,6 +134,79 @@ export const ROLE_CONFIG: Record<
     badgeBorder: 'rgba(238, 238, 238, 0.28)',
   },
 };
+
+/**
+ * Normaliza cualquier variante de rol (con tildes, mayúsculas, textos coloquiales o nulos)
+ * al slug canónico estricto de CittRole.
+ */
+export function normalizeCittRole(rawRole?: string | null): CittRole {
+  if (!rawRole || typeof rawRole !== 'string') return 'usuario_citt';
+  const clean = rawRole
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (
+    clean === 'dev' ||
+    clean === 'core_dev' ||
+    clean === 'core dev' ||
+    clean === 'admin' ||
+    clean === 'administrator'
+  ) {
+    return 'dev';
+  }
+
+  if (
+    clean === 'personal_duoc' ||
+    clean === 'personal duoc' ||
+    clean === 'personal duoc uc' ||
+    clean === 'profesor' ||
+    clean === 'docente' ||
+    clean === 'coordinador' ||
+    clean === 'coordinador citt' ||
+    clean === 'director'
+  ) {
+    return 'personal_duoc';
+  }
+
+  if (
+    clean === 'lider_citt' ||
+    clean === 'lider citt' ||
+    clean === 'lider' ||
+    clean === 'capitan'
+  ) {
+    return 'lider_citt';
+  }
+
+  if (
+    clean === 'consejero_carrera' ||
+    clean === 'consejero carrera' ||
+    clean === 'consejero'
+  ) {
+    return 'consejero_carrera';
+  }
+
+  if (
+    clean === 'partner' ||
+    clean === 'partner oficial' ||
+    clean === 'empresa' ||
+    clean === 'aliado'
+  ) {
+    return 'partner';
+  }
+
+  return 'usuario_citt';
+}
+
+/**
+ * Obtiene la configuración de presentación del rol de forma resiliente,
+ * garantizando que nunca retorne undefined.
+ */
+export function getRoleConfig(rawRole?: string | null): RoleConfigItem {
+  const normalized = normalizeCittRole(rawRole);
+  return ROLE_CONFIG[normalized] || ROLE_CONFIG.usuario_citt;
+}
 
 export const DUOC_SCHOOLS: DuocSchool[] = [
   {

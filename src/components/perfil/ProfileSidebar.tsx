@@ -13,7 +13,7 @@ import {
   Mail,
   QrCode,
 } from 'lucide-react';
-import { getCampusBySlug, getSchoolBySlug, ROLE_CONFIG } from '@/data/citt-catalog';
+import { getCampusBySlug, getSchoolBySlug, getRoleConfig } from '@/data/citt-catalog';
 import { CittMemberProfile } from '@/types/citt';
 import { downloadMemberVCard } from '@/lib/vcard';
 
@@ -34,7 +34,7 @@ export function ProfileSidebar({
 }: ProfileSidebarProps) {
   const campus = getCampusBySlug(member.campusSlug);
   const school = getSchoolBySlug(member.schoolSlug);
-  const roleInfo = ROLE_CONFIG[member.role];
+  const roleInfo = getRoleConfig(member.role);
 
   return (
     <aside className="space-y-6 lg:col-span-4">

@@ -22,7 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCittNetwork } from '@/context/CittNetworkContext';
-import { ROLE_CONFIG } from '@/data/citt-catalog';
+import { getRoleConfig } from '@/data/citt-catalog';
 import { RoleBadge } from '@/components/RoleBadge';
 import { PhygitalPassCard } from '@/components/PhygitalPassCard';
 
@@ -326,7 +326,7 @@ export function Navbar() {
                           {activeUser.fullName.split(' ')[0]}
                         </p>
                         <p className="text-xs font-semibold text-theme-primary">
-                          {ROLE_CONFIG[activeUser.role].shortLabel}
+                          {getRoleConfig(activeUser.role).shortLabel}
                         </p>
                       </div>
                       <ChevronDown className="h-3.5 w-3.5 shrink-0 text-theme-secondary" />
@@ -430,7 +430,7 @@ export function Navbar() {
                                       {member.fullName.split(' ')[0]}
                                     </p>
                                     <p className="truncate text-[10px] text-theme-secondary">
-                                      {ROLE_CONFIG[member.role].shortLabel}
+                                      {getRoleConfig(member.role).shortLabel}
                                     </p>
                                   </div>
                                 </div>

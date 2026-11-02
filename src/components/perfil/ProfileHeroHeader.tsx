@@ -18,7 +18,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
-import { getCampusBySlug, getSchoolBySlug, ROLE_CONFIG } from '@/data/citt-catalog';
+import { getCampusBySlug, getSchoolBySlug, getRoleConfig } from '@/data/citt-catalog';
 import { CittMemberProfile, ConnectionStatus } from '@/types/citt';
 import { RoleBadge, SchoolBadge } from '@/components/RoleBadge';
 import { PhygitalPassCard } from '@/components/PhygitalPassCard';
@@ -52,7 +52,7 @@ export function ProfileHeroHeader({
 }: ProfileHeroHeaderProps) {
   const campus = getCampusBySlug(member.campusSlug);
   const school = getSchoolBySlug(member.schoolSlug);
-  const roleInfo = ROLE_CONFIG[member.role];
+  const roleInfo = getRoleConfig(member.role);
   const bannerImage = member.bannerUrl || '/assets/citt-hero-lobby.webp';
 
   const initials = member.fullName
