@@ -70,6 +70,33 @@ export interface RoomReservation {
   cittPassSentAt?: string;
 }
 
+/**
+ * Normaliza el estado de una reserva proveniente de Supabase o API satélite
+ */
+export function normalizeReservationStatus(
+  rawStatus?: string | null
+): 'PENDING' | 'APPROVED' | 'REJECTED' | 'ATTENDED' | 'NO_SHOW' {
+  if (!rawStatus) return 'PENDING';
+  const clean = rawStatus.trim().toUpperCase();
+  if (clean === 'PENDING' || clean === 'EN_REVISION' || clean === 'SOLICITADA' || clean === 'ESPERA') {
+    return 'PENDING';
+  }
+  if (clean === 'APPROVED' || clean === 'CONFIRMED' || clean === 'CONFIRMADA' || clean === 'APROBADA') {
+    return 'APPROVED';
+  }
+  if (clean === 'ATTENDED' || clean === 'ASISTIDA' || clean === 'CHECKED_IN') {
+    return 'ATTENDED';
+  }
+  if (clean === 'NO_SHOW' || clean === 'INASISTENCIA') {
+    return 'NO_SHOW';
+  }
+  if (clean === 'REJECTED' || clean === 'RECHAZADA' || clean === 'CANCELLED' || clean === 'CANCELADA') {
+    return 'REJECTED';
+  }
+  // Fallback seguro: ante cualquier valor desconocido, se mantiene en PENDING para que el Admin decida
+  return 'PENDING';
+}
+
 const INITIAL_RESERVATIONS: RoomReservation[] = [];
 
 const INITIAL_BLOCKS: SupabaseAdminBlock[] = [];
@@ -114,7 +141,7 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
         endTime: r.timeSlot.split(' - ')[1] || '12:00',
         attendeesCount: r.attendees,
         requiresComputers: r.requiresComputers,
-        status: (r.status.toUpperCase() as any) || 'PENDING',
+        status: normalizeReservationStatus(r.status),
         cittHoursGranted: parseFloat(r.horasCitt) || 1.5,
         cittPassCode: r.cittPassCode,
         cittPassUrl: r.cittPassUrl,
@@ -197,18 +224,28 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
 
   const filteredReservations = reservations.filter((r) => {
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
-    if (filterRoom !== 'all' && r.campusName !== filterRoom) return false;
+    if (filterRoom !== 'all') {
+      const filterRoomNorm = filterRoom.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const itemCampusNorm = (r.campusName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!itemCampusNorm.includes(filterRoomNorm) && !filterRoomNorm.includes(itemCampusNorm)) return false;
+    }
     if (selectedCampusSlug && selectedCampusSlug !== 'nacional') {
-      const short = getCampusBySlug(selectedCampusSlug).shortName.toLowerCase();
-      if (!r.campusName.toLowerCase().includes(short)) return false;
+      const selectedSlugNorm = selectedCampusSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const itemCampusNorm = (r.campusName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!itemCampusNorm.includes(selectedSlugNorm) && !selectedSlugNorm.includes(itemCampusNorm)) {
+        return false;
+      }
     }
     return true;
   });
 
   const filteredBlocks = adminBlocks.filter((b) => {
     if (selectedCampusSlug && selectedCampusSlug !== 'nacional') {
-      const short = getCampusBySlug(selectedCampusSlug).shortName.toLowerCase();
-      if (!b.campus.toLowerCase().includes(short)) return false;
+      const selectedSlugNorm = selectedCampusSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const itemCampusNorm = (b.campus || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!itemCampusNorm.includes(selectedSlugNorm) && !selectedSlugNorm.includes(itemCampusNorm)) {
+        return false;
+      }
     }
     return true;
   });
@@ -344,6 +381,7 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
                 { id: 'APPROVED', label: 'Aprobadas' },
                 { id: 'ATTENDED', label: 'Asistidas' },
                 { id: 'NO_SHOW', label: 'Inasistencias' },
+                { id: 'REJECTED', label: 'Rechazadas' },
               ].map((item) => (
                 <button
                   key={item.id}
