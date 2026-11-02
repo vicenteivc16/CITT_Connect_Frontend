@@ -412,6 +412,106 @@ export function AdminCalendarBookings({ selectedCampusSlug }: AdminCalendarBooki
             </select>
           </div>
 
+          {/* MATRIZ DE HORAS TOMADAS Y CONFIRMADAS EN SALA (TIMELINE DEL DÍA) */}
+          <div className="rounded-3xl border border-theme bg-theme-surface p-5 shadow-theme-card space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-theme pb-3">
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 items-center justify-center rounded-xl bg-[#1A1A1A] text-[#FFB800] shadow-2xs">
+                  <Clock className="size-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-black text-theme-primary">
+                    Ocupación Horaria de la Sala · Bloques del Día
+                  </h3>
+                  <p className="text-[11px] text-theme-secondary">
+                    Monitoreo en tiempo real de las horas tomadas, confirmadas y pendientes en el Calendario CITT.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-mono font-bold">
+                <span className="flex items-center gap-1 text-[#43B02A]">
+                  <span className="size-2 rounded-full bg-[#43B02A]" /> Confirmada
+                </span>
+                <span className="flex items-center gap-1 text-[#FFB800]">
+                  <span className="size-2 rounded-full bg-[#FFB800]" /> En Revisión
+                </span>
+                <span className="flex items-center gap-1 text-slate-400">
+                  <span className="size-2 rounded-full bg-slate-300" /> Libre
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-1">
+              {[
+                "08:30 - 10:00",
+                "10:15 - 11:45",
+                "12:00 - 13:30",
+                "13:45 - 15:15",
+                "15:30 - 17:00",
+                "17:15 - 18:45",
+                "19:00 - 20:30",
+              ].map((slot) => {
+                const matched = filteredReservations.find(
+                  (r) =>
+                    r.dateStr === '2026-11-02' &&
+                    (r.startTime + ' - ' + r.endTime === slot ||
+                      (slot.startsWith(r.startTime) && slot.endsWith(r.endTime)))
+                );
+
+                const isApproved = matched && (matched.status === 'APPROVED' || matched.status === 'ATTENDED');
+                const isPending = matched && matched.status === 'PENDING';
+
+                return (
+                  <div
+                    key={slot}
+                    className={`rounded-2xl p-2.5 border text-center flex flex-col justify-between min-h-[92px] transition ${
+                      isApproved
+                        ? 'bg-[#43B02A]/10 border-[#43B02A]/40 text-[#194D1D]'
+                        : isPending
+                        ? 'bg-[#FFB800]/15 border-[#FFB800]/60 text-amber-900 ring-1 ring-[#FFB800]/40'
+                        : 'bg-theme-subtle border-theme text-theme-secondary'
+                    }`}
+                  >
+                    <div className="font-mono font-bold text-[11px] leading-none mb-1">
+                      {slot}
+                    </div>
+
+                    <div className="my-auto py-1">
+                      {matched ? (
+                        <div>
+                          <p className="text-[10px] font-black truncate max-w-[120px] mx-auto" title={matched.workshopTitle}>
+                            {matched.workshopTitle}
+                          </p>
+                          <p className="text-[9px] truncate max-w-[120px] mx-auto opacity-80" title={matched.applicantName}>
+                            {matched.applicantName}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-slate-400">
+                          Bloque Libre
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="pt-1 border-t border-black/5 dark:border-white/5">
+                      <span
+                        className={`inline-block rounded-md px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase tracking-wider ${
+                          isApproved
+                            ? 'bg-[#43B02A] text-white'
+                            : isPending
+                            ? 'bg-[#FFB800] text-[#1A1A1A]'
+                            : 'bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {isApproved ? 'Confirmada' : isPending ? 'En Revisión' : 'Disponible'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Listado */}
           <div className="space-y-3">
             {filteredReservations.length === 0 ? (
