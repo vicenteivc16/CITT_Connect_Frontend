@@ -41,7 +41,9 @@ export function AdminTenantsManagement({
 
   // Modal para agregar nueva sala
   const [modalOpen, setModalOpen] = useState(false);
-  const [targetCampus, setTargetCampus] = useState(CITT_CAMPUSES[0].slug);
+  const [targetCampus, setTargetCampus] = useState(
+    activeUser.role !== 'dev' && activeUser.campusSlug ? activeUser.campusSlug : CITT_CAMPUSES[0].slug
+  );
   const [newRoomName, setNewRoomName] = useState('');
   const [newRoomCapacity, setNewRoomCapacity] = useState(20);
   const [newRoomComputers, setNewRoomComputers] = useState(15);
@@ -117,15 +119,20 @@ export function AdminTenantsManagement({
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-[#FFB800]">
-              Arquitectura Multi-Tenant Federada
+              {activeUser.role === 'dev'
+                ? 'Arquitectura Multi-Tenant Federada'
+                : 'Coordinación Institucional de Sede'}
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-theme-primary tracking-tight">
-            Gestión de Sedes CITT & Salas Locales
+            {activeUser.role === 'dev'
+              ? 'Red Nacional de Sedes & Tenants CITT'
+              : `Sede & Infraestructura CITT · ${getCampusBySlug(activeUser.campusSlug || 'san-bernardo').name}`}
           </h2>
           <p className="mt-1 text-xs text-theme-secondary max-w-2xl leading-relaxed">
-            Cada sede de Duoc UC opera su propio tenant con salas, calendario, tótems y equipo directivo local.
-            El Core Dev tiene visibilidad y control sobre todas las sedes del país.
+            {activeUser.role === 'dev'
+              ? 'Supervisión y control centralizado de las 18 sedes de Duoc UC con sus respectivos laboratorios, coordinadores docentes y líderes de innovación.'
+              : 'Información institucional, salas habilitadas, personal docente y líderes CITT registrados para tu sede.'}
           </p>
         </div>
 
@@ -150,37 +157,39 @@ export function AdminTenantsManagement({
         </div>
       </div>
 
-      {/* Barra de Filtros de Sedes */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-theme bg-theme-surface p-4 shadow-theme-card sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-theme-secondary" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar sede por nombre, comuna o región..."
-            className="w-full rounded-xl border border-theme bg-theme-subtle py-2 pl-9 pr-3 text-xs font-medium text-theme-primary placeholder-theme-secondary focus:border-[#FFB800] focus:outline-none"
-          />
-        </div>
+      {/* Barra de Filtros de Sedes (solo visible para Core Dev que administra las 18 sedes) */}
+      {activeUser.role === 'dev' && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-theme bg-theme-surface p-4 shadow-theme-card sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-theme-secondary" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar sede por nombre, comuna o región..."
+              className="w-full rounded-xl border border-theme bg-theme-subtle py-2 pl-9 pr-3 text-xs font-medium text-theme-primary placeholder-theme-secondary focus:border-[#FFB800] focus:outline-none"
+            />
+          </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          <span className="text-[11px] font-bold text-theme-secondary shrink-0">Región:</span>
-          {regions.map((reg) => (
-            <button
-              key={reg}
-              type="button"
-              onClick={() => setSelectedRegion(reg)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-bold capitalize transition whitespace-nowrap ${
-                selectedRegion === reg
-                  ? 'bg-[#FFB800] text-[#1A1A1A]'
-                  : 'border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary'
-              }`}
-            >
-              {reg === 'todas' ? 'Todas las Regiones' : reg}
-            </button>
-          ))}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            <span className="text-[11px] font-bold text-theme-secondary shrink-0">Región:</span>
+            {regions.map((reg) => (
+              <button
+                key={reg}
+                type="button"
+                onClick={() => setSelectedRegion(reg)}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold capitalize transition whitespace-nowrap ${
+                  selectedRegion === reg
+                    ? 'bg-[#FFB800] text-[#1A1A1A]'
+                    : 'border border-theme bg-theme-subtle text-theme-secondary hover:text-theme-primary'
+                }`}
+              >
+                {reg === 'todas' ? 'Todas las Regiones' : reg}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Grid de 18 Tenants / Sedes */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">

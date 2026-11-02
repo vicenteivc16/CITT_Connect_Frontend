@@ -31,6 +31,7 @@ import { AdminMuroModeration } from '@/components/admin/AdminMuroModeration';
 import { AdminProjectsApproval } from '@/components/admin/AdminProjectsApproval';
 import { AdminActivitiesApproval } from '@/components/admin/AdminActivitiesApproval';
 import { AdminCalendarBookings } from '@/components/admin/AdminCalendarBookings';
+import { AdminCalendarRooms } from '@/components/admin/AdminCalendarRooms';
 import { AdminModuleJiraPlaceholder } from '@/components/admin/AdminModuleJiraPlaceholder';
 
 export default function AdminControlPlanePage() {
@@ -77,8 +78,21 @@ export default function AdminControlPlanePage() {
       if (activeUser.role !== 'dev') {
         setSelectedCampusSlug(activeUser.campusSlug || 'san-bernardo');
       }
+
+      // Protección RBAC estricta ante navegación por pestañas
+      if (activeUser.role === 'lider_citt') {
+        const forbiddenForLider: AdminModuleTab[] = ['tenants', 'usuarios', 'bitacora', 'ecosistema'];
+        if (forbiddenForLider.includes(activeTab)) {
+          setActiveTab('overview');
+        }
+      } else if (activeUser.role === 'personal_duoc') {
+        const forbiddenForDuoc: AdminModuleTab[] = ['usuarios', 'ecosistema'];
+        if (forbiddenForDuoc.includes(activeTab)) {
+          setActiveTab('overview');
+        }
+      }
     }
-  }, [activeUser]);
+  }, [activeUser, activeTab]);
 
   if (!mounted) {
     return (
@@ -194,13 +208,17 @@ export default function AdminControlPlanePage() {
             />
           )}
 
+          {activeTab === 'salas_totem' && (
+            <AdminCalendarRooms selectedCampusSlug={selectedCampusSlug} />
+          )}
+
           {activeTab === 'tenants' && (
             <AdminTenantsManagement
               activeUser={activeUser}
               profiles={profilesList}
               onSelectTenantForCalendar={(slug) => {
                 setSelectedCampusSlug(slug);
-                setActiveTab('calendario');
+                setActiveTab('salas_totem');
               }}
             />
           )}
