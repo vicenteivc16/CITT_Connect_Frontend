@@ -485,7 +485,7 @@ export function CreateProjectModal({
       <Dialog.Root open={open} onOpenChange={(val) => !val && handleRequestClose()}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm" />
-          <Dialog.Content className="relative fixed top-1/2 left-1/2 z-50 max-h-[92vh] w-[94vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 shadow-2xl focus:outline-none sm:p-8">
+          <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[92vh] w-[94vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-theme bg-theme-surface p-6 shadow-2xl focus:outline-none sm:p-8">
             {/* Header del Modal */}
             <div className="flex items-center justify-between border-b border-theme pb-4">
               <div className="flex items-center gap-3">
