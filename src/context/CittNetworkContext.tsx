@@ -208,13 +208,23 @@ export function CittNetworkProvider({
 
     getSupabaseActivities()
       .then((supabaseActs) => {
-        setActivities(supabaseActs);
-        try {
-          localStorage.setItem(
-            STORAGE_KEYS.ACTIVITIES,
-            JSON.stringify(supabaseActs)
-          );
-        } catch {}
+        if (supabaseActs && supabaseActs.length > 0) {
+          setActivities((prev) => {
+            const merged = [...supabaseActs];
+            prev.forEach((localAct) => {
+              if (!merged.some((a) => a.id === localAct.id)) {
+                merged.push(localAct);
+              }
+            });
+            try {
+              localStorage.setItem(
+                STORAGE_KEYS.ACTIVITIES,
+                JSON.stringify(merged)
+              );
+            } catch {}
+            return merged;
+          });
+        }
       })
       .catch((err) => console.warn('Supabase activities sync fallback:', err));
 

@@ -28,6 +28,8 @@ import {
   Building2,
   AlertCircle,
   HelpCircle,
+  QrCode,
+  Trash2,
 } from 'lucide-react';
 import { ActivityPublicQuestion, ActivityStudyMaterial, CittActivity } from '@/types/citt';
 import { DUOC_SCHOOLS, CITT_CAMPUSES } from '@/data/citt-catalog';
@@ -38,12 +40,14 @@ interface ActivityDetailModalProps {
   activity: CittActivity | null;
   onClose: () => void;
   onOpenEnrollment?: (activity: CittActivity) => void;
+  onViewTicket?: (activity: CittActivity) => void;
 }
 
 export function ActivityDetailModal({
   activity,
   onClose,
   onOpenEnrollment,
+  onViewTicket,
 }: ActivityDetailModalProps) {
   const {
     activeUser,
@@ -55,6 +59,7 @@ export function ActivityDetailModal({
 
   const [newQuestionText, setNewQuestionText] = useState('');
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   if (!activity) return null;
 
@@ -83,13 +88,20 @@ export function ActivityDetailModal({
 
   const handleEnrollClick = () => {
     if (isEnrolled || isWaitingList) {
-      unenrollFromActivity(activity.id);
+      if (onViewTicket) {
+        onViewTicket(activity);
+      }
       return;
     }
 
     if (onOpenEnrollment) {
       onOpenEnrollment(activity);
     }
+  };
+
+  const handleConfirmCancel = () => {
+    unenrollFromActivity(activity.id);
+    setShowCancelConfirm(false);
   };
 
   const handleSendQuestion = (e: React.FormEvent) => {
@@ -597,7 +609,12 @@ export function ActivityDetailModal({
                 {isEnrolled ? (
                   <span className="font-bold text-[#43B02A] flex items-center gap-1.5">
                     <CheckCircle2 className="h-4 w-4" />
-                    Estás inscrito oficialmente. Tu asistencia sumará +{activity.schedule.totalHoursCitt} Horas CITT.
+                    Estás inscrito con cupo confirmado. Sumará +{activity.schedule.totalHoursCitt} Horas CITT.
+                  </span>
+                ) : isWaitingList ? (
+                  <span className="font-bold text-[#FFB800] flex items-center gap-1.5">
+                    <Clock className="h-4 w-4" />
+                    Estás en lista de espera prioritaria institucional.
                   </span>
                 ) : availableSeats === 0 ? (
                   <span className="text-red-500 font-bold">
@@ -610,33 +627,102 @@ export function ActivityDetailModal({
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={handleEnrollClick}
-                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-xs font-black transition shadow-lg ${
-                  isEnrolled
-                    ? 'border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
-                    : isWaitingList
-                    ? 'border border-[#FFB800]/40 bg-[#FFB800]/10 text-[#FFB800]'
-                    : availableSeats === 0
-                    ? 'border border-theme bg-theme-subtle text-theme-secondary'
-                    : 'bg-[#FFB800] text-[#1A1A1A] hover:bg-[#ffc633]'
-                }`}
-              >
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 {isEnrolled ? (
-                  <span>Cancelar mi Inscripción</span>
-                ) : isWaitingList ? (
-                  <span>En Lista de Espera</span>
-                ) : availableSeats === 0 ? (
-                  <span>Unirme a Lista de Espera</span>
-                ) : (
                   <>
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelConfirm(true)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-red-500/30 px-3.5 py-3 text-xs font-bold text-red-500 hover:bg-red-500/10 transition"
+                      title="Liberar cupo para un compañero"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Liberar Cupo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onViewTicket ? onViewTicket(activity) : null}
+                      className="inline-flex flex-1 sm:flex-initial items-center justify-center gap-2 rounded-2xl bg-[#43B02A] px-5 py-3 text-xs font-black text-white hover:bg-[#3ba024] transition shadow-md"
+                    >
+                      <QrCode className="h-4 w-4" />
+                      <span>Ver mi Pase QR</span>
+                    </button>
+                  </>
+                ) : isWaitingList ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelConfirm(true)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-theme px-3 py-3 text-xs font-bold text-theme-secondary hover:text-red-500"
+                    >
+                      <span>Salir de Espera</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onViewTicket ? onViewTicket(activity) : null}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#FFB800] px-5 py-3 text-xs font-black text-[#1A1A1A] hover:bg-[#ffc633]"
+                    >
+                      <QrCode className="h-4 w-4" />
+                      <span>Ver Pase en Espera</span>
+                    </button>
+                  </>
+                ) : availableSeats === 0 ? (
+                  <button
+                    type="button"
+                    onClick={handleEnrollClick}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-[#FFB800] bg-[#FFB800]/15 px-6 py-3 text-xs font-black text-theme-primary hover:bg-[#FFB800] hover:text-[#1A1A1A] transition"
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>Unirme a Lista de Espera</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleEnrollClick}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-[#FFB800] px-6 py-3 text-xs font-black text-[#1A1A1A] hover:bg-[#ffc633] transition shadow-lg"
+                  >
                     <ShieldCheck className="h-4 w-4" />
                     <span>Inscribirme con Credencial CITT</span>
-                  </>
+                  </button>
                 )}
-              </button>
+              </div>
             </div>
+
+            {/* Modal de Confirmación de Cancelación */}
+            {showCancelConfirm && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center rounded-3xl bg-black/85 p-6 backdrop-blur-sm animate-in fade-in duration-150">
+                <div className="w-full max-w-md rounded-3xl border border-theme bg-theme-surface p-6 shadow-2xl space-y-4 text-left">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/15 text-red-500">
+                    <AlertCircle className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-theme-primary">
+                      ¿Liberar tu cupo en este taller?
+                    </h4>
+                    <p className="mt-1 text-xs text-theme-secondary leading-relaxed">
+                      Estás a punto de cancelar tu inscripción en <strong>{activity.title}</strong>.
+                      Tu cupo físico en la sala será asignado automáticamente al siguiente compañero en la lista de espera institucional.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelConfirm(false)}
+                      className="rounded-xl border border-theme bg-theme-subtle px-4 py-2 text-xs font-bold text-theme-primary"
+                    >
+                      Mantener mi Cupo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmCancel}
+                      className="rounded-xl bg-red-500 px-4 py-2 text-xs font-bold text-white hover:bg-red-600 transition"
+                    >
+                      Sí, Liberar Cupo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

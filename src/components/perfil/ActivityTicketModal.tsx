@@ -153,7 +153,9 @@ export function ActivityTicketModal({
               </span>
               <span className="font-bold text-theme-primary flex items-center gap-1 truncate">
                 <Clock className="h-3.5 w-3.5 text-[#FFB800] shrink-0" />
-                {activity.schedule.sessionTime}
+                {activity.schedule.timeStart && activity.schedule.timeEnd
+                  ? `${activity.schedule.timeStart} a ${activity.schedule.timeEnd} hrs`
+                  : activity.schedule.sessionTime}
               </span>
             </div>
 
@@ -177,6 +179,36 @@ export function ActivityTicketModal({
               </span>
             </div>
           </div>
+
+          {/* Insignia Digital CITT si la actividad la otorga */}
+          {activity.badge && (
+            <div className="flex items-center justify-between rounded-2xl border border-[#FFB800]/40 bg-[#FFB800]/10 p-3.5 text-xs">
+              <div className="flex items-center gap-3 min-w-0">
+                {activity.badge.imageUrl ? (
+                  <img
+                    src={activity.badge.imageUrl}
+                    alt={activity.badge.name}
+                    className="h-10 w-10 rounded-xl object-cover border border-[#FFB800]/50 shadow-sm shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFB800] text-[#1A1A1A] shadow-sm shrink-0">
+                    <Award className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <span className="font-black text-theme-primary block text-xs truncate">
+                    {activity.badge.name || 'Insignia Digital Oficial CITT'}
+                  </span>
+                  <span className="text-[11px] text-theme-secondary line-clamp-1">
+                    {activity.badge.criteria || 'Otorga credencial verificada con el 100% de asistencia'}
+                  </span>
+                </div>
+              </div>
+              <span className="rounded-full bg-[#FFB800] px-2.5 py-0.5 text-[10px] font-black text-[#1A1A1A] shrink-0">
+                100% ASISTENCIA
+              </span>
+            </div>
+          )}
 
           {/* QR Code and Pass Validation Block */}
           <div className="flex flex-col sm:flex-row items-center gap-5 rounded-2xl border-2 border-dashed border-theme bg-theme-surface p-5">

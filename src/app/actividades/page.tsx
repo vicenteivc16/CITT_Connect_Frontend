@@ -17,6 +17,7 @@ import { ActivityFiltersBar } from '@/components/actividades/ActivityFiltersBar'
 import { ActivityDetailModal } from '@/components/actividades/ActivityDetailModal';
 import { CreateActivityModal } from '@/components/actividades/CreateActivityModal';
 import { EnrollmentModal } from '@/components/actividades/EnrollmentModal';
+import { ActivityTicketModal } from '@/components/perfil/ActivityTicketModal';
 import { CittActivity, DuocSchoolSlug, ActivityModality } from '@/types/citt';
 
 export default function ActividadesPage() {
@@ -31,6 +32,7 @@ export default function ActividadesPage() {
   // Modales
   const [selectedActivity, setSelectedActivity] = useState<CittActivity | null>(null);
   const [enrollmentTarget, setEnrollmentTarget] = useState<CittActivity | null>(null);
+  const [ticketTarget, setTicketTarget] = useState<CittActivity | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const isPrivileged = Boolean(
@@ -169,6 +171,7 @@ export default function ActividadesPage() {
               activity={activity}
               onSelect={(act) => setSelectedActivity(act)}
               onEnrollRequest={(act) => setEnrollmentTarget(act)}
+              onViewTicket={(act) => setTicketTarget(act)}
             />
           ))}
         </div>
@@ -185,6 +188,10 @@ export default function ActividadesPage() {
             setSelectedActivity(null);
             setEnrollmentTarget(act);
           }}
+          onViewTicket={(act) => {
+            setSelectedActivity(null);
+            setTicketTarget(act);
+          }}
         />
       )}
 
@@ -193,6 +200,16 @@ export default function ActividadesPage() {
         isOpen={Boolean(enrollmentTarget)}
         onClose={() => setEnrollmentTarget(null)}
       />
+
+      {ticketTarget && (
+        <ActivityTicketModal
+          activity={activities.find((a) => a.id === ticketTarget.id) || ticketTarget}
+          user={activeUser}
+          isOpen={Boolean(ticketTarget)}
+          onClose={() => setTicketTarget(null)}
+          isWaitingList={(ticketTarget.waitingListUsernames || []).includes(activeUser?.username || '')}
+        />
+      )}
 
       <CreateActivityModal
         isOpen={isCreateOpen}

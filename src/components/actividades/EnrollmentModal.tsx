@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   X,
   ShieldCheck,
@@ -17,8 +18,10 @@ import {
   QrCode,
   Building2,
   Users,
+  Download,
 } from 'lucide-react';
 import { CittActivity } from '@/types/citt';
+import { getCampusBySlug } from '@/data/citt-catalog';
 import { RoleBadge } from '@/components/RoleBadge';
 import { useCittNetwork } from '@/context/CittNetworkContext';
 
@@ -159,55 +162,137 @@ export function EnrollmentModal({
             </div>
           </div>
         ) : confirmedCode ? (
-          /* CASO 2: INSCRIPCIÓN CONFIRMADA CON ÉXITO */
-          <div className="text-center space-y-5">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#43B02A]/20 text-[#43B02A]">
-              <CheckCircle2 className="h-8 w-8" />
+          /* CASO 2: INSCRIPCIÓN CONFIRMADA CON ÉXITO & TICKET QR OFICIAL */
+          <div className="space-y-5 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#43B02A]/20 text-[#43B02A]">
+              <CheckCircle2 className="h-7 w-7" />
             </div>
 
             <div>
               <span className="inline-block rounded-full border border-[#43B02A]/40 bg-[#43B02A]/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-[#43B02A]">
-                {isFull ? 'LISTA DE ESPERA REGISTRADA' : 'CUPO RESERVADO EN SALA'}
+                {isFull ? '⏳ LISTA DE ESPERA REGISTRADA' : '✓ CUPO & AFORO CONFIRMADO'}
               </span>
               <h3 className="mt-2 text-xl font-black text-theme-primary">
-                ¡Inscripción Confirmada!
+                ¡Pase Digital Generado!
               </h3>
               <p className="mt-1 text-xs text-theme-secondary">
-                Tu cupo ha sido registrado en la base de datos de <strong>Supabase</strong>.
+                Tu ticket individual ha sido vinculado a tu cuenta y sincronizado en <strong>Supabase</strong>.
               </p>
             </div>
 
-            {/* Tarjeta de Ticket */}
-            <div className="rounded-2xl border-2 border-dashed border-[#FFB800] bg-[#FFB800]/10 p-5 space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-theme-secondary">
-                Código de Ticket Institucional
-              </span>
-              <p className="font-mono text-2xl font-black text-theme-primary tracking-widest">
-                {confirmedCode}
+            {/* Credencial / Ticket Oficial con Código QR Dinámico */}
+            <div className="relative overflow-hidden rounded-3xl border-2 border-dashed border-[#FFB800] bg-theme-surface p-5 shadow-xl text-left space-y-4">
+              {/* Header del Ticket */}
+              <div className="flex items-center justify-between border-b border-theme pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FFB800] font-black text-xs text-[#1A1A1A]">
+                    CITT
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#FFB800] block">
+                      Pase de Entrada CITT Connect
+                    </span>
+                    <span className="text-xs font-black text-theme-primary">
+                      {activity.title}
+                    </span>
+                  </div>
+                </div>
+                <span className="font-mono text-xs font-bold text-theme-secondary">
+                  {confirmedCode}
+                </span>
+              </div>
+
+              {/* Contenedor QR Central */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 bg-theme-subtle rounded-2xl p-4">
+                <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-2xl bg-white p-2.5 shadow-md">
+                  <QRCodeSVG
+                    value={JSON.stringify({
+                      ticketId: confirmedCode,
+                      activityId: activity.id,
+                      activityTitle: activity.title,
+                      studentUsername: activeUser.username,
+                      studentName: activeUser.fullName,
+                      roomLocation: activity.roomLocation,
+                      schedule: activity.schedule.daysDescription,
+                      hoursCitt: activity.schedule.totalHoursCitt,
+                      hasBadge: Boolean(activity.badge),
+                      status: isFull ? 'lista_espera' : 'confirmado',
+                      timestamp: new Date().toISOString(),
+                    })}
+                    size={110}
+                    level="M"
+                    includeMargin={false}
+                  />
+                </div>
+
+                <div className="space-y-1.5 text-xs min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-theme-primary font-bold">
+                    <ShieldCheck className="h-4 w-4 text-[#43B02A] shrink-0" />
+                    <span className="truncate">Titular: {activeUser.fullName}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-theme-secondary text-[11px]">
+                    <MapPin className="h-3.5 w-3.5 text-[#307FE2] shrink-0" />
+                    <span className="font-medium text-theme-primary truncate">{activity.roomLocation}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-theme-secondary text-[11px]">
+                    <Calendar className="h-3.5 w-3.5 text-[#43B02A] shrink-0" />
+                    <span className="truncate">{activity.schedule.daysDescription}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-theme-secondary text-[11px]">
+                    <Clock className="h-3.5 w-3.5 text-[#FFB800] shrink-0" />
+                    <span className="truncate">
+                      {activity.schedule.timeStart && activity.schedule.timeEnd
+                        ? `${activity.schedule.timeStart} a ${activity.schedule.timeEnd} hrs`
+                        : activity.schedule.sessionTime}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <Award className="h-3.5 w-3.5 text-[#FFB800] shrink-0" />
+                    <span className="font-black text-[#43B02A] text-[11px]">
+                      +{activity.schedule.totalHoursCitt} Horas CITT Acreditables
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Badge de Insignia Oficial si aplica */}
+              {activity.badge && (
+                <div className="rounded-xl border border-[#FFB800]/40 bg-[#FFB800]/10 p-2.5 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FFB800] text-[#1A1A1A]">
+                      <Award className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-theme-primary block text-[11px]">
+                        Otorga Insignia Digital CITT
+                      </span>
+                      <span className="text-[10px] text-theme-secondary">
+                        Acreditable con el 100% de asistencia en sala
+                      </span>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-[#FFB800] px-2 py-0.5 text-[9px] font-black text-[#1A1A1A]">
+                    100% ASISTENCIA
+                  </span>
+                </div>
+              )}
+
+              <p className="text-[11px] text-theme-secondary leading-relaxed text-center sm:text-left">
+                💡 <em>Presenta este código QR en la pantalla de tu celular al ingresar al laboratorio CITT para registrar tu asistencia.</em>
               </p>
-              <div className="text-[11px] text-theme-secondary pt-1 border-t border-[#FFB800]/20 flex items-center justify-between">
-                <span>{activity.roomLocation}</span>
-                <span className="font-bold text-[#43B02A]">+{activity.schedule.totalHoursCitt} Horas CITT</span>
-              </div>
             </div>
 
-            {/* Info del Estudiante */}
-            <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 text-left text-xs space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-theme-secondary">Estudiante:</span>
-                <span className="font-bold text-theme-primary">{activeUser.fullName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-theme-secondary">Carrera & Sede:</span>
-                <span className="font-bold text-theme-primary">{activeUser.careerTitle}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-theme-secondary">Días de Taller:</span>
-                <span className="font-bold text-theme-primary">{activity.schedule.daysDescription}</span>
-              </div>
-            </div>
+            {/* Botones de Acción */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+              <Link
+                href="/mi-perfil"
+                onClick={onClose}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-theme bg-theme-elevated px-4 py-3 text-xs font-bold text-theme-primary transition hover:border-[#FFB800]"
+              >
+                <QrCode className="h-4 w-4 text-[#FFB800]" />
+                <span>Ver en Mis Talleres</span>
+              </Link>
 
-            <div className="pt-2">
               <button
                 type="button"
                 onClick={onClose}

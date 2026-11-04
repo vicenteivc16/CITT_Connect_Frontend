@@ -225,9 +225,17 @@ export function MyActivitiesTab({
                             {school.name}
                           </span>
 
-                          <span className="rounded-full bg-[#43B02A]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#43B02A]">
-                            ✓ Cupo Confirmado
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {act.badge && (
+                              <span className="rounded-full bg-[#FFB800]/20 px-2.5 py-0.5 text-[10px] font-black text-[#FFB800] border border-[#FFB800]/30 flex items-center gap-1">
+                                <Award className="h-3 w-3" />
+                                <span>🏅 Insignia</span>
+                              </span>
+                            )}
+                            <span className="rounded-full bg-[#43B02A]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#43B02A]">
+                              ✓ Cupo Confirmado
+                            </span>
+                          </div>
                         </div>
 
                         {/* Title & Desc */}
@@ -251,7 +259,9 @@ export function MyActivitiesTab({
                           <div className="flex items-center gap-1.5 text-theme-secondary truncate">
                             <Clock className="h-3.5 w-3.5 text-[#FFB800] shrink-0" />
                             <span className="font-bold text-theme-primary truncate">
-                              {act.schedule.sessionTime}
+                              {act.schedule.timeStart && act.schedule.timeEnd
+                                ? `${act.schedule.timeStart} a ${act.schedule.timeEnd} hrs`
+                                : act.schedule.sessionTime}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 text-theme-secondary truncate">

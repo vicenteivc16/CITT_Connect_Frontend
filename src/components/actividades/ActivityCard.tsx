@@ -15,6 +15,7 @@ import {
   Presentation,
   ArrowRight,
   Sparkles,
+  QrCode,
 } from 'lucide-react';
 import { CittActivity } from '@/types/citt';
 import { DUOC_SCHOOLS, CITT_CAMPUSES } from '@/data/citt-catalog';
@@ -25,12 +26,14 @@ interface ActivityCardProps {
   activity: CittActivity;
   onSelect: (activity: CittActivity) => void;
   onEnrollRequest?: (activity: CittActivity) => void;
+  onViewTicket?: (activity: CittActivity) => void;
 }
 
 export function ActivityCard({
   activity,
   onSelect,
   onEnrollRequest,
+  onViewTicket,
 }: ActivityCardProps) {
   const { activeUser, isAuthenticated, unenrollFromActivity } =
     useCittNetwork();
@@ -53,7 +56,11 @@ export function ActivityCard({
   const handleQuickEnroll = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isEnrolled || isWaitingList) {
-      unenrollFromActivity(activity.id);
+      if (onViewTicket) {
+        onViewTicket(activity);
+      } else {
+        onSelect(activity);
+      }
       return;
     }
 
@@ -252,23 +259,29 @@ export function ActivityCard({
           onClick={handleQuickEnroll}
           className={`shrink-0 inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition shadow-sm ${
             isEnrolled
-              ? 'border border-[#43B02A]/40 bg-[#43B02A]/10 text-[#43B02A] hover:bg-[#43B02A] hover:text-white'
+              ? 'border border-[#43B02A]/40 bg-[#43B02A]/15 text-[#43B02A] hover:bg-[#43B02A] hover:text-white'
               : isWaitingList
-              ? 'border border-[#FFB800]/40 bg-[#FFB800]/10 text-[#FFB800]'
+              ? 'border border-[#FFB800]/40 bg-[#FFB800]/15 text-[#FFB800] hover:bg-[#FFB800] hover:text-[#1A1A1A]'
               : availableSeats === 0
-              ? 'border border-theme bg-theme-subtle text-theme-secondary hover:bg-theme-surface'
+              ? 'border border-theme bg-theme-subtle text-theme-secondary hover:border-[#FFB800] hover:text-theme-primary'
               : 'bg-[#FFB800] text-[#1A1A1A] hover:bg-[#ffc633]'
           }`}
         >
           {isEnrolled ? (
             <>
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Inscrito</span>
+              <QrCode className="h-3.5 w-3.5" />
+              <span>Ver Ticket QR</span>
             </>
           ) : isWaitingList ? (
-            <span>En Lista</span>
+            <>
+              <Clock className="h-3.5 w-3.5" />
+              <span>En Lista (Ver)</span>
+            </>
           ) : availableSeats === 0 ? (
-            <span>Lista Espera</span>
+            <>
+              <Users className="h-3.5 w-3.5" />
+              <span>Lista Espera</span>
+            </>
           ) : (
             <>
               <span>Inscribirme</span>
