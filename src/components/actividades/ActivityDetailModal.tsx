@@ -1,6 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
+import * as Dialog from '@radix-ui/react-dialog';
 import {
   X,
   Calendar,
@@ -10,18 +12,24 @@ import {
   Award,
   BookOpen,
   CheckCircle2,
-  Download,
   ExternalLink,
   FileText,
+  FolderGit2,
   Github,
+  HardDrive,
+  Lock,
+  MessageCircle,
   MonitorPlay,
   Presentation,
+  Send,
+  Shield,
   ShieldCheck,
   Sparkles,
   Building2,
   AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
-import { CittActivity } from '@/types/citt';
+import { ActivityPublicQuestion, ActivityStudyMaterial, CittActivity } from '@/types/citt';
 import { DUOC_SCHOOLS, CITT_CAMPUSES } from '@/data/citt-catalog';
 import { RoleBadge } from '@/components/RoleBadge';
 import { useCittNetwork } from '@/context/CittNetworkContext';
@@ -37,8 +45,16 @@ export function ActivityDetailModal({
   onClose,
   onOpenEnrollment,
 }: ActivityDetailModalProps) {
-  const { activeUser, isAuthenticated, unenrollFromActivity } =
-    useCittNetwork();
+  const {
+    activeUser,
+    isAuthenticated,
+    unenrollFromActivity,
+    addActivityQuestion,
+    answerActivityQuestion,
+  } = useCittNetwork();
+
+  const [newQuestionText, setNewQuestionText] = useState('');
+  const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
 
   if (!activity) return null;
 
@@ -52,6 +68,14 @@ export function ActivityDetailModal({
   const isWaitingList =
     Boolean(activeUser?.username) &&
     (activity.waitingListUsernames || []).includes(activeUser.username);
+
+  const isInstructor =
+    Boolean(activeUser?.username) &&
+    activeUser.username === activity.instructorUsername;
+
+  const isCoreDev = activeUser?.role === 'dev';
+
+  const canAccessResources = isEnrolled || isInstructor || isCoreDev;
 
   const enrolledCount = activity.enrolledUsernames.length;
   const availableSeats = Math.max(0, activity.totalSeats - enrolledCount);
@@ -68,8 +92,24 @@ export function ActivityDetailModal({
     }
   };
 
+  const handleSendQuestion = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newQuestionText.trim()) return;
+    addActivityQuestion(activity.id, newQuestionText.trim());
+    setNewQuestionText('');
+  };
+
+  const handleSendReply = (questionId: string) => {
+    const text = replyTextMap[questionId];
+    if (!text || !text.trim()) return;
+    answerActivityQuestion(activity.id, questionId, text.trim());
+    setReplyTextMap((prev) => ({ ...prev, [questionId]: '' }));
+  };
+
   const getMaterialIcon = (type: string) => {
     switch (type) {
+      case 'drive':
+        return <HardDrive className="h-4 w-4 text-[#307FE2]" />;
       case 'github':
         return <Github className="h-4 w-4 text-theme-primary" />;
       case 'video':
@@ -82,269 +122,455 @@ export function ActivityDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-theme bg-theme-surface shadow-2xl"
-      >
-        {/* Cabecera con Imagen de Portada */}
-        <div className="relative h-60 w-full overflow-hidden bg-theme-subtle">
-          <img
-            src={activity.coverImageUrl || '/assets/citt-hero-lobby.webp'}
-            alt={activity.title}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+    <Dialog.Root open={Boolean(activity)} onOpenChange={(val) => !val && onClose()}>
+      <Dialog.Portal>
+        {/* Backdrop a nivel raíz: cubre toda la ventana de extremo a extremo incluyendo el Navbar z-40 */}
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[92vh] w-[94vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-theme bg-theme-surface shadow-2xl focus:outline-none">
+          {/* Cabecera con Imagen de Portada */}
+          <div className="relative h-60 w-full overflow-hidden bg-theme-subtle">
+            <img
+              src={activity.coverImageUrl || '/assets/citt-hero-lobby.webp'}
+              alt={activity.title}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
 
-          {/* Botón Cerrar */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-4 right-4 rounded-full bg-black/60 p-2 text-white hover:bg-black/90 transition shadow-lg backdrop-blur-md"
-          >
-            <X className="h-5 w-5" />
-          </button>
-
-          {/* Badges superiores */}
-          <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
-            <span
-              style={{
-                backgroundColor: school?.primaryHex ? `${school.primaryHex}EE` : '#307FE2EE',
-              }}
-              className="rounded-full px-3 py-1 text-xs font-black text-white shadow-md backdrop-blur-md"
-            >
-              {school?.name || 'Inter-Escuelas'}
-            </span>
-
-            <span className="rounded-full border border-white/20 bg-black/60 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-md">
-              {activity.modality === 'presencial'
-                ? '🏛️ Presencial en Sala CITT'
-                : activity.modality === 'hibrido'
-                ? '🌐 Modalidad Híbrida'
-                : '💻 Online / Streaming'}
-            </span>
-          </div>
-
-          {/* Título en la parte inferior de la portada */}
-          <div className="absolute bottom-4 left-4 right-4 text-white">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#FFB800] mb-1">
-              <Award className="h-4 w-4" />
-              <span>+{activity.schedule.totalHoursCitt} Horas CITT Acreditables</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black leading-tight drop-shadow-md">
-              {activity.title}
-            </h2>
-          </div>
-        </div>
-
-        {/* Contenido Principal */}
-        <div className="p-6 sm:p-8 space-y-6">
-          {/* Fila de Metadatos Rápidos */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 flex items-center gap-3">
-              <div className="rounded-xl bg-[#FFB800]/10 p-2 text-[#FFB800]">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase text-theme-secondary block">Días & Frecuencia</span>
-                <span className="text-xs font-black text-theme-primary truncate block">{activity.schedule.daysDescription}</span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 flex items-center gap-3">
-              <div className="rounded-xl bg-[#307FE2]/10 p-2 text-[#307FE2]">
-                <Clock className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase text-theme-secondary block">Horario de Sesión</span>
-                <span className="text-xs font-black text-theme-primary truncate block">{activity.schedule.sessionTime}</span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 flex items-center gap-3">
-              <div className="rounded-xl bg-[#43B02A]/10 p-2 text-[#43B02A]">
-                <Building2 className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase text-theme-secondary block">Espacio Físico</span>
-                <span className="text-xs font-black text-theme-primary truncate block">{activity.roomLocation}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tarjeta de Aforo Inteligente & Distribución de Cupos */}
-          <div className="rounded-3xl border border-theme bg-theme-subtle p-5 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-[#307FE2]" />
-                <h4 className="text-sm font-black text-theme-primary">
-                  Gestión de Cupos & Aforo de Laboratorio
-                </h4>
-              </div>
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-theme-surface border border-theme text-theme-primary">
-                {enrolledCount} de {activity.totalSeats} cupos ocupados ({percentage}%)
-              </span>
-            </div>
-
-            {/* Barra de Progreso */}
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-theme-surface border border-theme">
-              <div
-                style={{ width: `${percentage}%` }}
-                className={`h-full transition-all duration-500 ${
-                  percentage >= 100
-                    ? 'bg-red-500'
-                    : percentage >= 75
-                    ? 'bg-[#FFB800]'
-                    : 'bg-[#43B02A]'
-                }`}
-              />
-            </div>
-
-            {/* Explicación de distribución pedagógica solicitada por el usuario */}
-            <div className="rounded-2xl border border-[#307FE2]/20 bg-[#307FE2]/10 p-3.5 text-xs text-theme-secondary leading-relaxed">
-              <strong className="text-theme-primary block font-bold mb-0.5">
-                Arquitectura de Aforo CITT:
-              </strong>
-              La sala física tiene un aforo máximo de <strong>{activity.capacityPerSession} personas por sesión</strong> para garantizar estaciones de trabajo y kits de hardware individuales. Al distribuirse en <strong>{activity.sessionsCountPerWeek} sesiones semanales</strong>, el cupo total es de <strong>{activity.totalSeats} alumnos</strong> distribuidos equitativamente.
-            </div>
-          </div>
-
-          {/* Descripción Detallada */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-black text-theme-primary uppercase tracking-wide">
-              Sobre esta Actividad
-            </h4>
-            <p className="text-xs sm:text-sm text-theme-secondary leading-relaxed">
-              {activity.detailedDescription || activity.description}
-            </p>
-          </div>
-
-          {/* Tarjeta del Instructor CITT */}
-          <div className="rounded-2xl border border-theme bg-theme-subtle p-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img
-                src={activity.instructorAvatarUrl || '/assets/citt-logo.webp'}
-                alt={activity.instructorName}
-                className="h-12 w-12 rounded-2xl object-cover border-2 border-[#FFB800]"
-              />
-              <div>
-                <p className="text-xs font-black text-theme-primary">
-                  {activity.instructorName}
-                </p>
-                <p className="text-[11px] text-theme-secondary">
-                  Docente / Líder CITT a cargo de la actividad
-                </p>
-                <div className="mt-1">
-                  <RoleBadge role={activity.instructorRole} size="sm" showTooltip={false} />
-                </div>
-              </div>
-            </div>
-
-            <div className="text-right text-[11px] text-theme-secondary">
-              <span className="block font-bold text-theme-primary">{campus?.name}</span>
-              <span>{school?.shortName}</span>
-            </div>
-          </div>
-
-          {/* Apartado Especial: Recursos y Material de Estudio */}
-          <div className="space-y-3 pt-2 border-t border-theme">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-black text-theme-primary flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-[#FFB800]" />
-                <span>Recursos & Material de Estudio del Taller</span>
-              </h4>
-              <span className="text-xs text-theme-secondary font-medium">
-                {activity.studyMaterials.length} archivo(s)
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              {activity.studyMaterials.map((mat) => (
-                <div
-                  key={mat.id}
-                  className="rounded-2xl border border-theme bg-theme-subtle p-3.5 flex items-center justify-between gap-3 transition hover:border-[#FFB800]/50"
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="rounded-xl bg-theme-surface p-2 border border-theme shrink-0 mt-0.5">
-                      {getMaterialIcon(mat.type)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-black text-theme-primary truncate">
-                        {mat.title}
-                      </p>
-                      <p className="text-[11px] text-theme-secondary line-clamp-1">
-                        {mat.description}
-                      </p>
-                      <div className="mt-1 flex items-center gap-2 text-[10px] text-theme-secondary">
-                        <span className="uppercase font-bold text-[#FFB800]">{mat.type}</span>
-                        {mat.fileSizeOrDuration && <span>· {mat.fileSizeOrDuration}</span>}
-                        <span>· {mat.uploadedAt}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <a
-                    href={mat.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-surface px-3 py-1.5 text-xs font-bold text-theme-primary hover:bg-[#FFB800] hover:text-[#1A1A1A] transition shadow-sm"
-                  >
-                    <span>Abrir</span>
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Barra de Acción de Inscripción */}
-          <div className="pt-4 border-t border-theme flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-xs text-theme-secondary text-center sm:text-left">
-              {isEnrolled ? (
-                <span className="font-bold text-[#43B02A] flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Estás inscrito oficialmente. Tu asistencia sumará +{activity.schedule.totalHoursCitt} Horas CITT.
-                </span>
-              ) : availableSeats === 0 ? (
-                <span className="text-red-500 font-bold">
-                  El taller está lleno. Puedes anotarte en la lista de espera por si un compañero cancela.
-                </span>
-              ) : (
-                <span>
-                  Inscripción inmediata con tu Credencial Digital Duoc UC. Cupos limitados.
-                </span>
-              )}
-            </div>
-
+            {/* Botón Cerrar */}
             <button
               type="button"
-              onClick={handleEnrollClick}
-              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-xs font-black transition shadow-lg ${
-                isEnrolled
-                  ? 'border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
-                  : isWaitingList
-                  ? 'border border-[#FFB800]/40 bg-[#FFB800]/10 text-[#FFB800]'
-                  : availableSeats === 0
-                  ? 'border border-theme bg-theme-subtle text-theme-secondary'
-                  : 'bg-[#FFB800] text-[#1A1A1A] hover:bg-[#ffc633]'
-              }`}
+              onClick={onClose}
+              className="absolute top-4 right-4 rounded-full bg-black/60 p-2 text-white hover:bg-black/90 transition shadow-lg backdrop-blur-md"
             >
-              {isEnrolled ? (
-                <span>Cancelar mi Inscripción</span>
-              ) : isWaitingList ? (
-                <span>En Lista de Espera</span>
-              ) : availableSeats === 0 ? (
-                <span>Unirme a Lista de Espera</span>
-              ) : (
-                <>
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>Inscribirme con Credencial CITT</span>
-                </>
-              )}
+              <X className="h-5 w-5" />
             </button>
+
+            {/* Badges superiores */}
+            <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
+              <span
+                style={{
+                  backgroundColor: school?.primaryHex ? `${school.primaryHex}EE` : '#307FE2EE',
+                }}
+                className="rounded-full px-3 py-1 text-xs font-black text-white shadow-md backdrop-blur-md"
+              >
+                {school?.name || 'Inter-Escuelas'}
+              </span>
+
+              <span className="rounded-full border border-white/20 bg-black/60 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-md">
+                {activity.modality === 'presencial'
+                  ? '🏛️ Presencial en Sala CITT'
+                  : activity.modality === 'hibrido'
+                  ? '🌐 Modalidad Híbrida'
+                  : '💻 Online / Streaming'}
+              </span>
+            </div>
+
+            {/* Título en la parte inferior de la portada */}
+            <div className="absolute bottom-4 left-4 right-4 text-white">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#FFB800] mb-1">
+                <Award className="h-4 w-4" />
+                <span>+{activity.schedule.totalHoursCitt} Horas CITT Acreditables</span>
+              </div>
+              <Dialog.Title className="text-xl sm:text-2xl font-black leading-tight drop-shadow-md text-white">
+                {activity.title}
+              </Dialog.Title>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+
+          {/* Contenido Principal */}
+          <div className="p-6 sm:p-8 space-y-6">
+            {/* Fila de Metadatos Rápidos */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 flex items-center gap-3">
+                <div className="rounded-xl bg-[#FFB800]/10 p-2 text-[#FFB800]">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase text-theme-secondary block">
+                    Días & Frecuencia
+                  </span>
+                  <span className="text-xs font-black text-theme-primary truncate block">
+                    {activity.schedule.daysDescription}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 flex items-center gap-3">
+                <div className="rounded-xl bg-[#307FE2]/10 p-2 text-[#307FE2]">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase text-theme-secondary block">
+                    Horario de Sesión
+                  </span>
+                  <span className="text-xs font-black text-theme-primary truncate block">
+                    {activity.schedule.sessionTime}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-theme bg-theme-subtle p-3.5 flex items-center gap-3">
+                <div className="rounded-xl bg-[#43B02A]/10 p-2 text-[#43B02A]">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase text-theme-secondary block">
+                    Espacio Físico
+                  </span>
+                  <span className="text-xs font-black text-theme-primary truncate block">
+                    {activity.roomLocation}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tarjeta de Aforo Inteligente & Distribución de Cupos */}
+            <div className="rounded-3xl border border-theme bg-theme-subtle p-5 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-[#307FE2]" />
+                  <h4 className="text-sm font-black text-theme-primary">
+                    Gestión de Cupos & Aforo de Laboratorio
+                  </h4>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-theme-surface border border-theme text-theme-primary">
+                  {enrolledCount} de {activity.totalSeats} cupos ocupados ({percentage}%)
+                </span>
+              </div>
+
+              {/* Barra de Progreso */}
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-theme-surface border border-theme">
+                <div
+                  style={{ width: `${percentage}%` }}
+                  className={`h-full transition-all duration-500 ${
+                    percentage >= 100
+                      ? 'bg-red-500'
+                      : percentage >= 75
+                      ? 'bg-[#FFB800]'
+                      : 'bg-[#43B02A]'
+                  }`}
+                />
+              </div>
+
+              {/* Explicación de distribución pedagógica */}
+              <div className="rounded-2xl border border-[#307FE2]/20 bg-[#307FE2]/10 p-3.5 text-xs text-theme-secondary leading-relaxed">
+                <strong className="text-theme-primary block font-bold mb-0.5">
+                  Arquitectura de Aforo CITT:
+                </strong>
+                La sala física tiene un aforo máximo de{' '}
+                <strong>{activity.capacityPerSession} personas por sesión</strong> para garantizar estaciones de trabajo y kits de hardware individuales. Al distribuirse en{' '}
+                <strong>{activity.sessionsCountPerWeek} sesiones semanales</strong>, el cupo total es de{' '}
+                <strong>{activity.totalSeats} alumnos</strong>.
+              </div>
+            </div>
+
+            {/* Descripción Detallada */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-black text-theme-primary uppercase tracking-wide">
+                Sobre esta Actividad
+              </h4>
+              <p className="text-xs sm:text-sm text-theme-secondary leading-relaxed">
+                {activity.detailedDescription || activity.description}
+              </p>
+            </div>
+
+            {/* Tarjeta del Instructor CITT */}
+            <div className="rounded-2xl border border-theme bg-theme-subtle p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <img
+                  src={activity.instructorAvatarUrl || '/assets/citt-logo.webp'}
+                  alt={activity.instructorName}
+                  className="h-12 w-12 rounded-2xl object-cover border-2 border-[#FFB800]"
+                />
+                <div>
+                  <p className="text-xs font-black text-theme-primary">
+                    {activity.instructorName}
+                  </p>
+                  <p className="text-[11px] text-theme-secondary">
+                    Docente / Líder CITT a cargo de la actividad
+                  </p>
+                  <div className="mt-1">
+                    <RoleBadge role={activity.instructorRole} size="sm" showTooltip={false} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-right text-[11px] text-theme-secondary">
+                <span className="block font-bold text-theme-primary">{campus?.name}</span>
+                <span>{school?.shortName}</span>
+              </div>
+            </div>
+
+            {/* ========================================================= */}
+            {/* RECURSOS & ENLACES EXCLUSIVOS PARA INSCRITOS */}
+            {/* ========================================================= */}
+            <div className="space-y-3 pt-2 border-t border-theme">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-black text-theme-primary flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-[#FFB800]" />
+                  <span>Recursos & Material de Estudio</span>
+                </h4>
+                {canAccessResources && (
+                  <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-500">
+                    Acceso Desbloqueado
+                  </span>
+                )}
+              </div>
+
+              {!canAccessResources ? (
+                /* Estado Bloqueado para No Inscritos */
+                <div className="rounded-2xl border border-[#FFB800]/40 bg-[#FFB800]/10 p-5 text-center space-y-2">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FFB800]/20 text-[#FFB800]">
+                    <Lock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-theme-primary">
+                      Recursos & Material Exclusivo para Alumnos Inscritos
+                    </p>
+                    <p className="mt-1 text-[11px] text-theme-secondary max-w-md mx-auto leading-relaxed">
+                      Este taller cuenta con{' '}
+                      <strong>{activity.studyMaterials.length} recurso(s) protegidos</strong>{' '}
+                      (carpetas Google Drive, repositorios y documentación). Inscríbete oficialmente en el taller para desbloquear los accesos directos del docente.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* Estado Desbloqueado para Inscritos e Instructor */
+                <div className="space-y-2">
+                  {activity.studyMaterials.length === 0 ? (
+                    <p className="text-xs text-theme-secondary py-3 text-center">
+                      El instructor aún no ha compartido enlaces adicionales para este taller.
+                    </p>
+                  ) : (
+                    activity.studyMaterials.map((mat) => (
+                      <div
+                        key={mat.id}
+                        className="rounded-2xl border border-theme bg-theme-subtle p-3.5 flex items-center justify-between gap-3 transition hover:border-[#FFB800]/50"
+                      >
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="rounded-xl bg-theme-surface p-2 border border-theme shrink-0 mt-0.5">
+                            {getMaterialIcon(mat.type)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-theme-primary truncate">
+                              {mat.title}
+                            </p>
+                            <p className="text-[11px] text-theme-secondary line-clamp-1">
+                              {mat.description}
+                            </p>
+                            <div className="mt-1 flex items-center gap-2 text-[10px] text-theme-secondary">
+                              <span className="uppercase font-bold text-[#FFB800]">{mat.type}</span>
+                              {mat.fileSizeOrDuration && <span>· {mat.fileSizeOrDuration}</span>}
+                              <span>· {mat.uploadedAt}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <a
+                          href={mat.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-theme bg-theme-surface px-3 py-1.5 text-xs font-bold text-theme-primary hover:bg-[#FFB800] hover:text-[#1A1A1A] transition shadow-sm"
+                        >
+                          <span>Abrir Enlace</span>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ========================================================= */}
+            {/* PANEL INFERIOR: PREGUNTAS PÚBLICAS (Q&A DEL TALLER) */}
+            {/* ========================================================= */}
+            <div className="space-y-4 pt-4 border-t border-theme">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5 text-[#307FE2]" />
+                  <div>
+                    <h4 className="text-sm font-black text-theme-primary">
+                      Preguntas & Dudas del Taller
+                    </h4>
+                    <p className="text-[11px] text-theme-secondary">
+                      Preguntas públicas para resolver dudas sobre requisitos e instrumental
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-theme-secondary">
+                  {(activity.publicQuestions || []).length} pregunta(s)
+                </span>
+              </div>
+
+              {/* Formulario para Enviar Pregunta */}
+              {isAuthenticated ? (
+                <form onSubmit={handleSendQuestion} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newQuestionText}
+                    onChange={(e) => setNewQuestionText(e.target.value)}
+                    placeholder="Escribe tu pregunta sobre el taller (ej. ¿Se requieren conocimientos previos de Python?)..."
+                    className="flex-1 rounded-xl border border-theme bg-theme-subtle px-3.5 py-2 text-xs text-theme-primary placeholder-theme-secondary focus:border-[#307FE2] focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newQuestionText.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#307FE2] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#2569bd] disabled:opacity-50"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    <span>Preguntar</span>
+                  </button>
+                </form>
+              ) : (
+                <div className="rounded-xl border border-theme bg-theme-subtle p-3 text-xs text-theme-secondary flex items-center justify-between">
+                  <span>Inicia sesión con tu credencial institucional para publicar preguntas.</span>
+                  <Link href="/acceso" className="font-bold text-[#FFB800] underline">
+                    Iniciar Sesión
+                  </Link>
+                </div>
+              )}
+
+              {/* Lista de Preguntas */}
+              <div className="space-y-3">
+                {(!activity.publicQuestions || activity.publicQuestions.length === 0) ? (
+                  <p className="py-4 text-center text-xs text-theme-secondary">
+                    Aún no hay preguntas para este taller. ¡Sé el primero en consultar!
+                  </p>
+                ) : (
+                  activity.publicQuestions.map((q) => (
+                    <div
+                      key={q.id}
+                      className="rounded-2xl border border-theme bg-theme-subtle p-4 space-y-3"
+                    >
+                      {/* Cabecera de la Pregunta */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={q.authorAvatarUrl || '/assets/citt-logo.webp'}
+                            alt={q.authorName}
+                            className="h-7 w-7 rounded-lg object-cover"
+                          />
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-theme-primary">
+                                {q.authorName}
+                              </span>
+                              <RoleBadge role={q.authorRole} size="sm" showTooltip={false} />
+                            </div>
+                            <span className="text-[10px] text-theme-secondary">
+                              @{q.authorUsername} · {q.createdAt}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Texto de la Pregunta */}
+                      <p className="text-xs text-theme-primary leading-relaxed pl-9">
+                        {q.question}
+                      </p>
+
+                      {/* Respuesta Oficial si existe */}
+                      {q.answer ? (
+                        <div className="ml-9 rounded-xl border border-[#307FE2]/30 bg-[#307FE2]/10 p-3 space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-[#307FE2]" />
+                            <span className="text-[11px] font-black text-[#307FE2] uppercase tracking-wider">
+                              Respuesta Oficial del Instructor
+                            </span>
+                            <span className="text-[10px] text-theme-secondary">
+                              · {q.answer.answeredAt}
+                            </span>
+                          </div>
+                          <p className="text-xs text-theme-primary leading-relaxed">
+                            {q.answer.text}
+                          </p>
+                          <p className="text-[10px] text-theme-secondary font-medium">
+                            Respondido por {q.answer.authorName}
+                          </p>
+                        </div>
+                      ) : (
+                        /* Si no tiene respuesta y el usuario es Instructor o Core Dev */
+                        (isInstructor || isCoreDev) && (
+                          <div className="ml-9 mt-2 flex gap-2">
+                            <input
+                              type="text"
+                              value={replyTextMap[q.id] || ''}
+                              onChange={(e) =>
+                                setReplyTextMap((prev) => ({
+                                  ...prev,
+                                  [q.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="Escribe la respuesta oficial como instructor..."
+                              className="flex-1 rounded-lg border border-theme bg-theme-surface px-3 py-1.5 text-xs text-theme-primary focus:border-[#307FE2] focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSendReply(q.id)}
+                              disabled={!replyTextMap[q.id]?.trim()}
+                              className="rounded-lg bg-[#307FE2] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#2569bd] disabled:opacity-50"
+                            >
+                              Responder
+                            </button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Barra de Acción de Inscripción */}
+            <div className="pt-4 border-t border-theme flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-xs text-theme-secondary text-center sm:text-left">
+                {isEnrolled ? (
+                  <span className="font-bold text-[#43B02A] flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Estás inscrito oficialmente. Tu asistencia sumará +{activity.schedule.totalHoursCitt} Horas CITT.
+                  </span>
+                ) : availableSeats === 0 ? (
+                  <span className="text-red-500 font-bold">
+                    El taller está lleno. Puedes anotarte en la lista de espera por si un compañero cancela.
+                  </span>
+                ) : (
+                  <span>
+                    Inscripción inmediata con tu Credencial Digital Duoc UC. Cupos limitados.
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleEnrollClick}
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-xs font-black transition shadow-lg ${
+                  isEnrolled
+                    ? 'border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
+                    : isWaitingList
+                    ? 'border border-[#FFB800]/40 bg-[#FFB800]/10 text-[#FFB800]'
+                    : availableSeats === 0
+                    ? 'border border-theme bg-theme-subtle text-theme-secondary'
+                    : 'bg-[#FFB800] text-[#1A1A1A] hover:bg-[#ffc633]'
+                }`}
+              >
+                {isEnrolled ? (
+                  <span>Cancelar mi Inscripción</span>
+                ) : isWaitingList ? (
+                  <span>En Lista de Espera</span>
+                ) : availableSeats === 0 ? (
+                  <span>Unirme a Lista de Espera</span>
+                ) : (
+                  <>
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Inscribirme con Credencial CITT</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

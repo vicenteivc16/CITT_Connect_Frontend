@@ -177,7 +177,9 @@ export default function ActividadesPage() {
       {/* 4. Modales */}
       {selectedActivity && (
         <ActivityDetailModal
-          activity={selectedActivity}
+          activity={
+            activities.find((a) => a.id === selectedActivity.id) || selectedActivity
+          }
           onClose={() => setSelectedActivity(null)}
           onOpenEnrollment={(act) => {
             setSelectedActivity(null);

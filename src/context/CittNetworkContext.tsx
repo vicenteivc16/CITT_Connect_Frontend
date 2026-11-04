@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
+  ActivityPublicQuestion,
   CittActivity,
   CittFeedPost,
   CittMemberProfile,
@@ -95,6 +96,12 @@ interface CittNetworkContextValue {
   enrollInActivity: (activityId: string) => { success: boolean; message: string };
   unenrollFromActivity: (activityId: string) => { success: boolean; message: string };
   addActivity: (activity: Omit<CittActivity, 'id' | 'createdAt' | 'enrolledUsernames'>) => void;
+  addActivityQuestion: (activityId: string, questionText: string) => void;
+  answerActivityQuestion: (
+    activityId: string,
+    questionId: string,
+    answerText: string
+  ) => void;
   // Hardware NFC Tags & Pins
   nfcTags: CittNfcTag[];
   resolveNfcTag: (tagUid: string) => {
@@ -1211,6 +1218,69 @@ export function CittNetworkProvider({
       .catch((err) => console.warn('Supabase activity creation:', err));
   };
 
+  const addActivityQuestion = (activityId: string, questionText: string) => {
+    if (!questionText.trim()) return;
+    setActivities((prev) => {
+      const updated = prev.map((act) => {
+        if (act.id === activityId || act.slug === activityId) {
+          const newQ: ActivityPublicQuestion = {
+            id: `q-${Date.now()}`,
+            authorUsername: activeUser.username,
+            authorName: activeUser.fullName,
+            authorRole: activeUser.role,
+            authorAvatarUrl: activeUser.avatarUrl,
+            question: questionText.trim(),
+            createdAt: 'Recién preguntado',
+          };
+          return {
+            ...act,
+            publicQuestions: [...(act.publicQuestions || []), newQ],
+          };
+        }
+        return act;
+      });
+      try {
+        localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const answerActivityQuestion = (
+    activityId: string,
+    questionId: string,
+    answerText: string
+  ) => {
+    if (!answerText.trim()) return;
+    setActivities((prev) => {
+      const updated = prev.map((act) => {
+        if (act.id === activityId || act.slug === activityId) {
+          const updatedQs = (act.publicQuestions || []).map((q) => {
+            if (q.id === questionId) {
+              return {
+                ...q,
+                answer: {
+                  authorName: activeUser.fullName,
+                  authorRole: activeUser.role,
+                  authorAvatarUrl: activeUser.avatarUrl,
+                  text: answerText.trim(),
+                  answeredAt: 'Recién respondido',
+                },
+              };
+            }
+            return q;
+          });
+          return { ...act, publicQuestions: updatedQs };
+        }
+        return act;
+      });
+      try {
+        localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
   return (
     <CittNetworkContext.Provider
       value={{
@@ -1221,6 +1291,8 @@ export function CittNetworkProvider({
         enrollInActivity,
         unenrollFromActivity,
         addActivity,
+        addActivityQuestion,
+        answerActivityQuestion,
         activeUser,
         isAuthenticated,
         theme,

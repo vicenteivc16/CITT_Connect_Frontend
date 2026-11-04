@@ -224,10 +224,27 @@ export interface ActivityStudyMaterial {
   id: string;
   title: string;
   description: string;
-  type: 'pdf' | 'github' | 'slides' | 'video' | 'link' | 'dataset';
+  type: 'pdf' | 'github' | 'slides' | 'video' | 'link' | 'dataset' | 'drive';
   url: string;
   fileSizeOrDuration?: string;
   uploadedAt: string;
+}
+
+export interface ActivityPublicQuestion {
+  id: string;
+  authorUsername: string;
+  authorName: string;
+  authorRole: CittRole;
+  authorAvatarUrl?: string;
+  question: string;
+  createdAt: string;
+  answer?: {
+    authorName: string;
+    authorRole: CittRole;
+    authorAvatarUrl?: string;
+    text: string;
+    answeredAt: string;
+  };
 }
 
 export interface ActivitySchedule {
@@ -262,6 +279,7 @@ export interface CittActivity {
   waitingListUsernames?: string[];
   schedule: ActivitySchedule;
   studyMaterials: ActivityStudyMaterial[];
+  publicQuestions?: ActivityPublicQuestion[];
   tags: string[];
   coverImageUrl: string;
   createdAt: string;
