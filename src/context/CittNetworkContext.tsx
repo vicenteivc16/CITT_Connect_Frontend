@@ -181,13 +181,21 @@ export function CittNetworkProvider({
       // Fallback to initial seed data if localStorage is unavailable
     }
 
-    // Sincronización en vivo con Supabase en la nube
+    // Sincronización en vivo con Supabase en la nube (fusionando proyectos locales)
     getSupabaseProjects()
       .then((supabasePrjs) => {
-        setProjects(supabasePrjs);
-        try {
-          localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(supabasePrjs));
-        } catch {}
+        if (supabasePrjs && supabasePrjs.length > 0) {
+          setProjects((prev) => {
+            const localOnly = prev.filter(
+              (p) => !supabasePrjs.some((sp) => sp.id === p.id || sp.slug === p.slug)
+            );
+            const merged = [...localOnly, ...supabasePrjs];
+            try {
+              localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
       })
       .catch((err) => console.warn('Supabase projects sync fallback:', err));
 

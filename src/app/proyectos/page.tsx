@@ -228,16 +228,14 @@ export default function ProjectsShowcasePage() {
             </p>
           </div>
 
-          {canCreateProject && (
-            <button
-              type="button"
-              onClick={() => setCreateModalOpen(true)}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#FFB800] px-5 py-3 text-xs font-black text-[#1A1A1A] shadow-md transition hover:bg-[#ffc633] active:scale-95"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Publicar Proyecto</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setCreateModalOpen(true)}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#FFB800] px-5 py-3 text-xs font-black text-[#1A1A1A] shadow-md transition hover:bg-[#ffc633] active:scale-95"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Publicar Proyecto</span>
+          </button>
         </div>
 
         {/* 3 Pasos CITT */}

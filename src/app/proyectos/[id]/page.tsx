@@ -526,8 +526,8 @@ export default function ProjectDetailPage({ params }: PageProps) {
         </aside>
       </div>
 
-      {/* Modal Lightbox de Video Demo */}
-      {videoData && (
+      {/* Modal Lightbox de Video Demo (Solo si existe embedUrl válido) */}
+      {Boolean(videoData?.embedUrl) && (
         <Dialog.Root open={isVideoModalOpen} onOpenChange={setIsVideoModalOpen}>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md" />

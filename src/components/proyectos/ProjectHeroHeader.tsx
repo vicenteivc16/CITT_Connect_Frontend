@@ -159,8 +159,8 @@ export function ProjectHeroHeader({
             )}
           </div>
 
-          {/* CTA de Video Lightbox si existe */}
-          {videoData && (
+          {/* CTA de Video Lightbox si existe y tiene URL válida */}
+          {Boolean(videoData?.embedUrl) && (
             <div className="absolute inset-0 flex items-center justify-center">
               <button
                 type="button"
