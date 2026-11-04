@@ -6,7 +6,7 @@ import { Navbar } from '@/components/Navbar';
 
 const lato = Lato({
   subsets: ['latin'],
-  weight: ['400', '700', '900'],
+  weight: ['400', '700'],
   variable: '--font-lato',
   display: 'swap',
 });
@@ -16,6 +16,7 @@ const merriweather = Merriweather({
   weight: ['400', '700'],
   variable: '--font-merriweather',
   display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {
