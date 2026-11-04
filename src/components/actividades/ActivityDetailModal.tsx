@@ -192,6 +192,18 @@ export function ActivityDetailModal({
                   <span className="text-xs font-black text-theme-primary truncate block">
                     {activity.schedule.daysDescription}
                   </span>
+                  {activity.schedule.daysOfWeek && activity.schedule.daysOfWeek.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {activity.schedule.daysOfWeek.map((d) => (
+                        <span
+                          key={d}
+                          className="rounded-md bg-[#FFB800]/20 px-1.5 py-0.5 text-[9px] font-black text-[#FFB800] uppercase"
+                        >
+                          {d.slice(0, 2)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -204,7 +216,12 @@ export function ActivityDetailModal({
                     Horario de Sesión
                   </span>
                   <span className="text-xs font-black text-theme-primary truncate block">
-                    {activity.schedule.sessionTime}
+                    {activity.schedule.timeStart && activity.schedule.timeEnd
+                      ? `${activity.schedule.timeStart} a ${activity.schedule.timeEnd} hrs`
+                      : activity.schedule.sessionTime}
+                  </span>
+                  <span className="text-[10px] text-theme-secondary block mt-0.5">
+                    {activity.schedule.durationWeeks} semanas de duración
                   </span>
                 </div>
               </div>
@@ -220,9 +237,61 @@ export function ActivityDetailModal({
                   <span className="text-xs font-black text-theme-primary truncate block">
                     {activity.roomLocation}
                   </span>
+                  <span className="text-[10px] text-theme-secondary block mt-0.5">
+                    {campus?.name || activity.campusSlug}
+                  </span>
                 </div>
               </div>
             </div>
+
+            {/* Tarjeta de Insignia Digital CITT (si la actividad la otorga) */}
+            {activity.badge && (
+              <div className="relative overflow-hidden rounded-3xl border border-[#FFB800]/40 bg-gradient-to-br from-[#FFB800]/15 via-theme-subtle to-theme-subtle p-5 shadow-lg shadow-[#FFB800]/5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    {/* Contenedor Gráfico con Glow */}
+                    <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-[#FFB800] bg-black/90 p-2 shadow-md shadow-[#FFB800]/25">
+                      {activity.badge.imageUrl ? (
+                        <img
+                          src={activity.badge.imageUrl}
+                          alt={activity.badge.name}
+                          className="h-full w-full object-contain drop-shadow"
+                        />
+                      ) : (
+                        <Award className="h-8 w-8 text-[#FFB800]" />
+                      )}
+                      <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FFB800] text-[#1A1A1A] shadow-sm">
+                        <Sparkles className="h-3 w-3" />
+                      </span>
+                    </div>
+
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-[#FFB800] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#1A1A1A]">
+                          Insignia Digital CITT
+                        </span>
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20">
+                          Acreditable al 100% de Asistencia
+                        </span>
+                      </div>
+                      <h4 className="mt-1 text-base font-black text-theme-primary">
+                        {activity.badge.name}
+                      </h4>
+                      <p className="mt-0.5 text-xs text-theme-secondary leading-snug">
+                        {activity.badge.criteria}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3.5 pt-3 border-t border-theme/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-theme-secondary">
+                  <span>🛡️ Regulada bajo el Estándar Oficial de Insignias CITT.</span>
+                  <span className="font-bold text-[#FFB800]">
+                    Verificada en tu Credencial Digital & Perfil CITT
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Tarjeta de Aforo Inteligente & Distribución de Cupos */}
             <div className="rounded-3xl border border-theme bg-theme-subtle p-5 space-y-3">

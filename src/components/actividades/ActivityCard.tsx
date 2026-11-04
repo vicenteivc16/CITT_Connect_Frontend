@@ -119,9 +119,20 @@ export function ActivityCard({
               <span className="truncate">{campus?.name || activity.campusSlug}</span>
             </div>
 
-            <div className="flex items-center gap-1 rounded-md bg-[#FFB800] px-2 py-0.5 text-[11px] font-black text-[#1A1A1A] shadow-sm">
-              <Award className="h-3.5 w-3.5" />
-              <span>+{activity.schedule.totalHoursCitt} Horas CITT</span>
+            <div className="flex items-center gap-1.5">
+              {activity.badge && (
+                <div
+                  title="Otorga Insignia Digital CITT al 100% de asistencia"
+                  className="flex items-center gap-1 rounded-md bg-black/75 border border-[#FFB800]/50 px-2 py-0.5 text-[10px] font-bold text-[#FFB800] backdrop-blur-md"
+                >
+                  <Award className="h-3 w-3 text-[#FFB800]" />
+                  <span>Insignia</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1 rounded-md bg-[#FFB800] px-2 py-0.5 text-[11px] font-black text-[#1A1A1A] shadow-sm">
+                <Award className="h-3.5 w-3.5" />
+                <span>+{activity.schedule.totalHoursCitt} Horas CITT</span>
+              </div>
             </div>
           </div>
         </div>

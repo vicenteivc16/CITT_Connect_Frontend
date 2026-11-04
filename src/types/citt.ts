@@ -247,9 +247,23 @@ export interface ActivityPublicQuestion {
   };
 }
 
+export interface ActivityBadge {
+  id: string;
+  name: string;
+  criteria: string;
+  imageUrl: string;
+  status: 'pendiente_aprobacion' | 'aprobada' | 'rechazada';
+  awardedUsernames?: string[];
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
 export interface ActivitySchedule {
   daysDescription: string;
+  daysOfWeek?: string[];
   sessionTime: string;
+  timeStart?: string;
+  timeEnd?: string;
   frequencyPerWeek: number;
   durationWeeks: number;
   startDate: string;
@@ -280,6 +294,7 @@ export interface CittActivity {
   schedule: ActivitySchedule;
   studyMaterials: ActivityStudyMaterial[];
   publicQuestions?: ActivityPublicQuestion[];
+  badge?: ActivityBadge;
   tags: string[];
   coverImageUrl: string;
   createdAt: string;
