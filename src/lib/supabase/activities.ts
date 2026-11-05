@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './client';
-import { CittActivity, CittMemberProfile } from '@/types/citt';
+import { CittActivity, CittMemberProfile, ActivityStatus } from '@/types/citt';
 
 export async function getSupabaseActivities(): Promise<CittActivity[]> {
   if (!isSupabaseConfigured) return [];
@@ -181,6 +181,30 @@ export async function createSupabaseActivity(
 
     if (error) return { success: false, error: error.message };
     return { success: true, data };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+export async function updateSupabaseActivityStatus(
+  activityId: string,
+  status: ActivityStatus
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured) {
+    return { success: true };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('activities')
+      .update({ status })
+      .or(`id.eq.${activityId},slug.eq.${activityId}`);
+
+    if (error) {
+      console.error('Error updating activity status in Supabase:', error.message);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message };
   }

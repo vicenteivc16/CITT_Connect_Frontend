@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   ActivityPublicQuestion,
+  ActivityStatus,
   CittActivity,
   CittFeedPost,
   CittMemberProfile,
@@ -26,6 +27,7 @@ import {
   enrollInSupabaseActivity,
   unenrollFromSupabaseActivity,
   createSupabaseActivity,
+  updateSupabaseActivityStatus,
 } from '@/lib/supabase/activities';
 import { getSupabaseProfiles } from '@/lib/supabase/profiles';
 import {
@@ -96,6 +98,7 @@ interface CittNetworkContextValue {
   enrollInActivity: (activityId: string) => { success: boolean; message: string };
   unenrollFromActivity: (activityId: string) => { success: boolean; message: string };
   addActivity: (activity: Omit<CittActivity, 'id' | 'createdAt' | 'enrolledUsernames'>) => void;
+  updateActivityStatus: (activityId: string, status: ActivityStatus) => void;
   addActivityQuestion: (activityId: string, questionText: string) => void;
   answerActivityQuestion: (
     activityId: string,
@@ -1228,6 +1231,22 @@ export function CittNetworkProvider({
       .catch((err) => console.warn('Supabase activity creation:', err));
   };
 
+  const updateActivityStatus = (activityId: string, status: ActivityStatus) => {
+    setActivities((prev) => {
+      const updated = prev.map((act) =>
+        act.id === activityId || act.slug === activityId ? { ...act, status } : act
+      );
+      try {
+        localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    updateSupabaseActivityStatus(activityId, status).catch((err) =>
+      console.warn('Supabase activity status update error:', err)
+    );
+  };
+
   const addActivityQuestion = (activityId: string, questionText: string) => {
     if (!questionText.trim()) return;
     setActivities((prev) => {
@@ -1301,6 +1320,7 @@ export function CittNetworkProvider({
         enrollInActivity,
         unenrollFromActivity,
         addActivity,
+        updateActivityStatus,
         addActivityQuestion,
         answerActivityQuestion,
         activeUser,

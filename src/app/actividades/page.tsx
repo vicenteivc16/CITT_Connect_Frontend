@@ -44,13 +44,13 @@ export default function ActividadesPage() {
   // Filtrado de Actividades
   const filteredActivities = useMemo(() => {
     return activities.filter((act) => {
-      // Filtrar actividades aún en evaluación en el panel interno
-      if (act.status === 'en_espera') {
-        const isAuthor = activeUser?.username && act.instructorUsername === activeUser.username;
-        const isAdmin = activeUser && ['dev', 'personal_duoc', 'lider_citt'].includes(activeUser.role);
-        if (!isAuthor && !isAdmin) {
-          return false;
-        }
+      // Validación Estricta de Aprobación:
+      // En /actividades solo son visibles públicamente las actividades aprobadas ('aprobada' o 'abierto').
+      // Las actividades en evaluación ('en_espera'), pausadas/ocultas ('pausada'),
+      // rechazadas ('rechazada') o finalizadas ('finalizada') no se publican en este catálogo.
+      const isApproved = act.status === 'aprobada' || act.status === 'abierto';
+      if (!isApproved) {
+        return false;
       }
 
       // Búsqueda por texto
@@ -100,13 +100,17 @@ export default function ActividadesPage() {
     activeUser?.username,
   ]);
 
-  // Métricas para la cabecera
-  const totalOpenWorkshops = activities.filter((a) => a.status === 'abierto').length;
-  const totalAvailableSeats = activities.reduce(
+  // Métricas para la cabecera (solo actividades aprobadas y públicas)
+  const approvedActivities = useMemo(() => {
+    return activities.filter((a) => a.status === 'abierto' || a.status === 'aprobada');
+  }, [activities]);
+
+  const totalOpenWorkshops = approvedActivities.length;
+  const totalAvailableSeats = approvedActivities.reduce(
     (acc, a) => acc + Math.max(0, a.totalSeats - a.enrolledUsernames.length),
     0
   );
-  const totalStudyMaterials = activities.reduce(
+  const totalStudyMaterials = approvedActivities.reduce(
     (acc, a) => acc + (a.studyMaterials?.length || 0),
     0
   );

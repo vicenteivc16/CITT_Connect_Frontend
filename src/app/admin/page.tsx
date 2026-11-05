@@ -71,6 +71,13 @@ export default function AdminControlPlanePage() {
   useEffect(() => {
     setMounted(true);
     refreshData();
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab') as AdminModuleTab | null;
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+    }
   }, []);
 
   useEffect(() => {

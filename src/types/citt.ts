@@ -218,7 +218,15 @@ export interface CittNfcTag {
 }
 
 export type ActivityModality = 'presencial' | 'hibrido' | 'online';
-export type ActivityStatus = 'abierto' | 'en_curso' | 'finalizado' | 'en_espera';
+export type ActivityStatus =
+  | 'en_espera'
+  | 'aprobada'
+  | 'abierto'
+  | 'rechazada'
+  | 'pausada'
+  | 'finalizada'
+  | 'finalizado'
+  | 'en_curso';
 
 export interface ActivityStudyMaterial {
   id: string;
