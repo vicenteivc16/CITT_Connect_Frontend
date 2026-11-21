@@ -38,17 +38,21 @@ export function MyActivitiesTab({
   const [activityToCancel, setActivityToCancel] = useState<CittActivity | null>(null);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
-  // Filter activities for this user
+  // Filter activities for this user (separando en curso vs finalizadas)
   const confirmedActivities = activities.filter((act) =>
     act.enrolledUsernames.includes(user.username)
+  );
+
+  const activeConfirmedActivities = confirmedActivities.filter(
+    (act) => act.status !== 'finalizada' && act.status !== 'finalizado'
   );
 
   const waitingListActivities = activities.filter((act) =>
     act.waitingListUsernames?.includes(user.username)
   );
 
-  // Total Hours CITT calculation
-  const totalHoursInProgress = confirmedActivities.reduce(
+  // Total Hours CITT calculation (horas en curso)
+  const totalHoursInProgress = activeConfirmedActivities.reduce(
     (acc, act) => acc + (act.schedule?.totalHoursCitt || 0),
     0
   );
@@ -305,14 +309,21 @@ export function MyActivitiesTab({
 
                       {/* Card Actions */}
                       <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-theme pt-4">
-                        <button
-                          type="button"
-                          onClick={() => setActivityToCancel(act)}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-red-500 hover:text-red-600 transition"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span>Liberar Cupo</span>
-                        </button>
+                        {act.status !== 'finalizada' && act.status !== 'finalizado' ? (
+                          <button
+                            type="button"
+                            onClick={() => setActivityToCancel(act)}
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-red-500 hover:text-red-600 transition"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Liberar Cupo</span>
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-500">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Taller Finalizado</span>
+                          </span>
+                        )}
 
                         <button
                           type="button"

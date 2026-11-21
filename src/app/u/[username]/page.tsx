@@ -43,7 +43,7 @@ export default function PublicMemberProfilePage() {
 
   const member = profiles.find((p) => p.username === params.username);
 
-  if (!mounted || (profiles.length === 0 && !member)) {
+  if (!mounted) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#FFB800] border-t-transparent" />

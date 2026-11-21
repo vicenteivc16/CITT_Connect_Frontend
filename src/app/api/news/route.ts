@@ -336,10 +336,13 @@ async function fetchLiveNewsFromFeeds(): Promise<NewsItem[]> {
   const liveItems: NewsItem[] = [];
 
   try {
-    // Fetch de Dev.to con tag exclusivo en español
+    // Fetch de Dev.to con tag exclusivo en español y timeout defensivo de 3.5s
     const devtoRes = await fetch(
       'https://dev.to/api/articles?tag=espanol&per_page=6',
-      { next: { revalidate: 3600 } }
+      {
+        next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(3500),
+      }
     );
 
     if (devtoRes.ok) {

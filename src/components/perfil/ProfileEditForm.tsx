@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Award,
   Camera,
@@ -49,12 +49,12 @@ export function ProfileEditForm({
     key: K,
     value: CittMemberProfile[K]
   ) => {
-    setFormState((prev) => {
-      const updated = { ...prev, [key]: value };
-      onProfileStateChange?.(updated);
-      return updated;
-    });
+    setFormState((prev) => ({ ...prev, [key]: value }));
   };
+
+  useEffect(() => {
+    onProfileStateChange?.(formState);
+  }, [formState, onProfileStateChange]);
 
   const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

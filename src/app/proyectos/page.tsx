@@ -65,6 +65,11 @@ const REGIONS = [
   'Región de Los Lagos',
 ];
 
+const normalizeRegion = (r: string) =>
+  r.replace(/^Región (de |del |de la )?/i, '').trim().toLowerCase();
+const matchRegion = (campRegion: string, filterRegion: string) =>
+  normalizeRegion(campRegion) === normalizeRegion(filterRegion);
+
 export default function ProjectsShowcasePage() {
   const {
     projects,
@@ -94,7 +99,7 @@ export default function ProjectsShowcasePage() {
     if (selectedRegion === 'Todas las Regiones') {
       return CITT_CAMPUSES;
     }
-    return CITT_CAMPUSES.filter((c) => c.region === selectedRegion);
+    return CITT_CAMPUSES.filter((c) => matchRegion(c.region, selectedRegion));
   }, [selectedRegion]);
 
   // Proyecto Destacado (Spotlight)
@@ -128,7 +133,7 @@ export default function ProjectsShowcasePage() {
       // Filtro por Región
       if (selectedRegion !== 'Todas las Regiones') {
         const campus = getCampusBySlug(project.originCampusSlug);
-        if (campus.region !== selectedRegion) return false;
+        if (!matchRegion(campus.region, selectedRegion)) return false;
       }
 
       // Filtro por Sede

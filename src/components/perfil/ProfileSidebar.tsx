@@ -131,14 +131,18 @@ export function ProfileSidebar({
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {member.specialties.map((spec) => (
-            <span
-              key={spec}
-              className="rounded-xl bg-theme-elevated px-3 py-1.5 text-xs font-bold text-theme-primary"
-            >
-              {spec}
-            </span>
-          ))}
+          {(member.specialties || []).length > 0 ? (
+            member.specialties.map((spec) => (
+              <span
+                key={spec}
+                className="rounded-xl bg-theme-elevated px-3 py-1.5 text-xs font-bold text-theme-primary"
+              >
+                {spec}
+              </span>
+            ))
+          ) : (
+            <p className="text-xs text-theme-secondary italic">Sin especialidades registradas aún.</p>
+          )}
         </div>
 
         <div className="mt-5 border-t border-theme pt-4 text-xs text-theme-secondary">

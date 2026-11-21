@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -48,6 +48,22 @@ export function EnrollmentModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmedCode, setConfirmedCode] = useState<string | null>(null);
 
+  // Limpiar estado residual al cerrar o cambiar de actividad
+  useEffect(() => {
+    if (!isOpen) {
+      setConfirmedCode(null);
+      setAcceptedTerms(true);
+      setIsSubmitting(false);
+    }
+  }, [isOpen, activity?.id]);
+
+  const handleModalClose = () => {
+    setConfirmedCode(null);
+    setAcceptedTerms(true);
+    setIsSubmitting(false);
+    onClose();
+  };
+
   if (!isOpen || !activity) return null;
 
   const isEnrolled =
@@ -58,7 +74,7 @@ export function EnrollmentModal({
   const isFull = enrolledCount >= activity.totalSeats;
 
   const handleConfirmEnrollment = async () => {
-    if (!acceptedTerms || !isAuthenticated) return;
+    if (!acceptedTerms || !isAuthenticated || isSubmitting) return;
     setIsSubmitting(true);
 
     try {
@@ -85,7 +101,7 @@ export function EnrollmentModal({
         {/* Botón Cerrar */}
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleModalClose}
           className="absolute top-4 right-4 rounded-full p-2 text-theme-secondary hover:bg-theme-subtle hover:text-theme-primary transition"
         >
           <X className="h-5 w-5" />
@@ -286,7 +302,7 @@ export function EnrollmentModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
               <Link
                 href="/mi-perfil"
-                onClick={onClose}
+                onClick={handleModalClose}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-theme bg-theme-elevated px-4 py-3 text-xs font-bold text-theme-primary transition hover:border-[#FFB800]"
               >
                 <QrCode className="h-4 w-4 text-[#FFB800]" />
@@ -295,7 +311,7 @@ export function EnrollmentModal({
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleModalClose}
                 className="w-full rounded-2xl bg-[#FFB800] px-5 py-3 text-xs font-black text-[#1A1A1A] hover:bg-[#ffc633] transition shadow-md"
               >
                 Entendido y Cerrar

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCittNetwork } from '@/context/CittNetworkContext';
@@ -34,7 +34,40 @@ function AutorizarReservaContent() {
   const dateParam = searchParams.get('date') || new Date().toISOString().split('T')[0];
   const roomParam = searchParams.get('room') || 'Sala CITT 312';
   const campusParam = searchParams.get('campus') || 'San Bernardo';
-  const callbackUrl = searchParams.get('callback_url');
+  const rawCallbackUrl = searchParams.get('callback_url');
+  const safeCallbackUrl = useMemo(() => {
+    if (!rawCallbackUrl) return null;
+    const trimmed = rawCallbackUrl.trim();
+    if (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.toLowerCase().includes('javascript:')) {
+      return trimmed;
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (
+        parsed.protocol === 'https:' &&
+        (parsed.hostname.endsWith('duocuc.cl') ||
+          parsed.hostname.endsWith('duoc.cl') ||
+          parsed.hostname.endsWith('vercel.app') ||
+          parsed.hostname === 'localhost')
+      ) {
+        return trimmed;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }, [rawCallbackUrl]);
+
+  const calculateTimeSlot = (start: string, durationMinutes: number) => {
+    const [hStr, mStr] = start.split(':');
+    const startH = parseInt(hStr || '10', 10);
+    const startM = parseInt(mStr || '0', 10);
+    const totalEndMinutes = startH * 60 + startM + durationMinutes;
+    const endH = Math.floor(totalEndMinutes / 60) % 24;
+    const endM = totalEndMinutes % 60;
+    const formattedEnd = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    return `${start} - ${formattedEnd}`;
+  };
 
   const [startTime, setStartTime] = useState('10:00');
   const [duration, setDuration] = useState('60');
@@ -87,7 +120,7 @@ function AutorizarReservaContent() {
         inChargeRole: activeUser.role,
         school: school?.shortName || 'Informática',
         date: dateParam,
-        timeSlot: `${startTime} - ${parseInt(startTime.split(':')[0], 10) + parseInt(duration, 10) / 60}:00`,
+        timeSlot: calculateTimeSlot(startTime, parseInt(duration, 10)),
         purpose: activityName,
         attendees: attendeesCount,
         requiresComputers,
@@ -111,7 +144,7 @@ function AutorizarReservaContent() {
         inChargeRole: activeUser.role,
         school: school?.name || activeUser.careerTitle,
         date: dateParam,
-        timeSlot: `${startTime} - ${parseInt(startTime.split(':')[0], 10) + parseInt(duration, 10) / 60}:00`,
+        timeSlot: calculateTimeSlot(startTime, parseInt(duration, 10)),
         purpose: activityName,
         attendees: attendeesCount,
         requiresComputers,
@@ -170,7 +203,13 @@ function AutorizarReservaContent() {
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
-                href={`/acceso?redirect=/autorizar-reserva?token=${token}&date=${dateParam}&room=${encodeURIComponent(roomParam)}&campus=${encodeURIComponent(campusParam)}`}
+                href={`/acceso?redirect=${encodeURIComponent(
+                  `/autorizar-reserva?token=${token}&date=${dateParam}&room=${encodeURIComponent(
+                    roomParam
+                  )}&campus=${encodeURIComponent(campusParam)}${
+                    safeCallbackUrl ? `&callback_url=${encodeURIComponent(safeCallbackUrl)}` : ''
+                  }`
+                )}`}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#FFB800] px-6 py-3 text-sm font-black text-[#1A1A1A] transition hover:bg-[#FFB800]/90"
               >
                 <span>Acceder con mi Cuenta Duoc UC</span>
@@ -244,9 +283,9 @@ function AutorizarReservaContent() {
             </div>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              {callbackUrl ? (
+              {safeCallbackUrl ? (
                 <a
-                  href={callbackUrl}
+                  href={safeCallbackUrl}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#307FE2] px-6 py-3 text-sm font-black text-white transition hover:bg-[#307FE2]/90"
                 >
                   <span>Volver al Tótem del Calendario</span>

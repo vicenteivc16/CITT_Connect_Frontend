@@ -36,33 +36,21 @@ interface AdminRoomConfigModalProps {
 const HERO_PRESETS = [
   {
     id: 'hero-citt-official',
-    label: 'Espacio Tecnológico CITT (Oficial)',
-    url: '/hero/hero-vista1.webp',
+    label: 'Espacio Tecnológico CITT (Lobby Oficial)',
+    url: '/assets/citt-hero-lobby.webp',
     description: 'Laboratorio de alto contraste con estaciones de prototipado',
   },
   {
     id: 'hero-iot',
     label: 'Laboratorio IoT & Telemetría',
-    url: '/galeria/iot.webp',
+    url: '/assets/banner-iot.webp',
     description: 'Microcontroladores, banco de telemetría y sensores',
   },
   {
     id: 'hero-comunidad',
     label: 'Comunidad & Co-Creación',
-    url: '/galeria/comunidad.webp',
+    url: '/assets/banner-comunidad.webp',
     description: 'Espacio colaborativo de mentoría y desarrollo estudiantil',
-  },
-  {
-    id: 'hero-digital-fab',
-    label: 'Fabricación Digital & Prototipado 3D',
-    url: '/showcase/digital-fab.svg',
-    description: 'Estaciones de impresión 3D y manufactura digital',
-  },
-  {
-    id: 'hero-robotics',
-    label: 'Robótica y Automatización ROS 2',
-    url: '/showcase/robotics.svg',
-    description: 'Brazos cinemáticos y robótica móvil autónoma',
   },
 ];
 
@@ -71,29 +59,22 @@ const DEFAULT_GALLERY: GalleryPhotoItem[] = [
     id: 'g-comunidad',
     title: 'Comunidad & Co-Creación CITT',
     category: 'Comunidad',
-    src: '/galeria/comunidad.webp',
+    src: '/assets/banner-comunidad.webp',
     alt: 'Estudiantes y líderes CITT colaborando en desarrollo tecnológico',
   },
   {
     id: 'g-iot',
     title: 'Laboratorio IoT & Telemetría',
     category: 'IoT',
-    src: '/galeria/iot.webp',
+    src: '/assets/banner-iot.webp',
     alt: 'Estaciones de prototipado de Internet de las Cosas y sensores',
   },
   {
-    id: 'g-robotica',
-    title: 'Laboratorio de Robótica & ROS 2',
-    category: 'Robótica',
-    src: '/showcase/robotics.svg',
-    alt: 'Brazo robótico controlado por cinemática inversa y ROS 2',
-  },
-  {
-    id: 'g-hardware',
-    title: 'Fabricación Digital & Prototipado 3D',
-    category: 'Hardware',
-    src: '/showcase/digital-fab.svg',
-    alt: 'Impresión 3D de piezas mecánicas y estaciones de prototipado rápido',
+    id: 'g-lobby',
+    title: 'Lobby Tecnológico CITT',
+    category: 'Espacio',
+    src: '/assets/citt-hero-lobby.webp',
+    alt: 'Estaciones de trabajo y prototipado CITT',
   },
 ];
 
@@ -513,7 +494,9 @@ export function AdminRoomConfigModal({
                       alt="Vista previa hero"
                       className="h-full w-full object-cover object-center"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/hero/hero-vista1.webp';
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = '/assets/citt-hero-lobby.webp';
                       }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-3">

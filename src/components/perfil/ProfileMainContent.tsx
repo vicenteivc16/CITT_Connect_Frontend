@@ -189,7 +189,7 @@ export function ProfileMainContent({
                       Especialidades buscadas en otras sedes CITT:
                     </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {proj.neededSpecialties.map((spec) => (
+                      {(proj.neededSpecialties || []).map((spec) => (
                         <span
                           key={spec}
                           className="rounded-lg bg-theme-elevated px-2.5 py-1 text-xs font-semibold text-theme-primary"

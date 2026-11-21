@@ -70,7 +70,6 @@ export function Navbar() {
     logoutMember,
     theme,
     setThemeMode,
-    connectedMemberIds,
   } = useCittNetwork();
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -117,20 +116,15 @@ export function Navbar() {
                 alt="Emblema CITT Connect 3D"
                 className="h-8 w-8 shrink-0 object-contain sm:h-9 sm:w-9"
               />
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="whitespace-nowrap text-base font-black tracking-tight text-theme-primary">
-                    CITT Connect
-                  </span>
-                  <img
-                    src="/assets/Logo_DuocUC.svg.webp"
-                    alt="Logo Oficial Duoc UC"
-                    className="h-4 w-auto object-contain hidden sm:inline-block brightness-100 dark:brightness-110"
-                  />
-                </div>
-                <p className="whitespace-nowrap text-xs font-medium text-theme-secondary">
-                  18 Sedes · {connectedMemberIds.length} vínculos
-                </p>
+              <div className="flex items-center gap-2">
+                <span className="whitespace-nowrap text-base font-black tracking-tight text-theme-primary">
+                  CITT Connect
+                </span>
+                <img
+                  src="/assets/Logo_DuocUC.svg.webp"
+                  alt="Logo Oficial Duoc UC"
+                  className="h-4 w-auto object-contain hidden sm:inline-block brightness-100 dark:brightness-110"
+                />
               </div>
             </Link>
           </div>

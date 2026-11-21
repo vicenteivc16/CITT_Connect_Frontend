@@ -133,8 +133,32 @@ export async function unenrollFromSupabaseActivity(
     }
 
     return { success: true, message: 'Cupo liberado con éxito en Supabase.' };
-  } catch (err: any) {
-    return { success: false, message: err?.message || 'Error de conexión' };
+  } catch (err: unknown) {
+    return { success: false, message: (err as Error)?.message || 'Error de conexión' };
+  }
+}
+
+export async function promoteWaitingListUserInSupabase(
+  activityId: string,
+  promotedUsername: string
+): Promise<{ success: boolean; message: string }> {
+  if (!isSupabaseConfigured) {
+    return { success: true, message: 'Usuario promovido en modo local.' };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('activity_enrollments')
+      .update({ status: 'confirmed' })
+      .match({ activity_id: activityId, username: promotedUsername });
+
+    if (error) {
+      return { success: false, message: error.message };
+    }
+
+    return { success: true, message: 'Usuario promovido a cupo confirmado en Supabase.' };
+  } catch (err: unknown) {
+    return { success: false, message: (err as Error)?.message || 'Error de conexión' };
   }
 }
 

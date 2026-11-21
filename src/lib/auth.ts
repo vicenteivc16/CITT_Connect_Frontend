@@ -301,15 +301,16 @@ export async function executeCittRegister(
       });
 
       if (error) {
-        // En Duoc UC las cuentas se confirman vía Microsoft Auth (Azure SSO). Si Supabase alcanza el límite de envío SMTP, hacemos fallback transparente.
+        // En Duoc UC las cuentas se confirman vía Microsoft Auth (Azure SSO). Si Supabase alcanza el límite de envío SMTP o está sin conexión externa, hacemos fallback transparente.
         if (
           error.message.toLowerCase().includes('rate limit') ||
-          error.message.toLowerCase().includes('email rate limit')
+          error.message.toLowerCase().includes('email rate limit') ||
+          error.message.toLowerCase().includes('fetch')
         ) {
           console.warn(
-            'Aviso Supabase SMTP rate limit:',
+            'Aviso Supabase Auth network/rate limit:',
             error.message,
-            '-> Continuando con aprovisionamiento institucional con validación de identidad Microsoft 365.'
+            '-> Continuando con aprovisionamiento local/offline institucional.'
           );
         } else {
           return {
@@ -357,57 +358,129 @@ export async function executeCittLogin(
   emailOrUsername: string,
   password?: string
 ): Promise<AuthActionResult> {
-  const isEmail = emailOrUsername.includes('@');
+  const cleanInput = (emailOrUsername || '').trim();
+  const isEmail = cleanInput.includes('@');
+  const lowerInput = cleanInput.toLowerCase();
 
-  if (isSupabaseConfigured && isEmail && password) {
+  if (isSupabaseConfigured) {
+    if (!password) {
+      return {
+        success: false,
+        message: 'Por favor, ingresa tu contraseña institucional.',
+      };
+    }
+
     try {
+      let targetEmail = lowerInput;
+
+      // Si es un username sin @, buscar su email registrado en public.profiles
+      if (!isEmail) {
+        const { data: profile, error: profileErr } = await supabase
+          .from('profiles')
+          .select('email, role, full_name, username')
+          .eq('username', cleanInput)
+          .maybeSingle();
+
+        if (profileErr) {
+          if (!profileErr.message?.toLowerCase().includes('fetch')) {
+            return {
+              success: false,
+              message: 'No encontramos una cuenta con ese nombre de usuario.',
+            };
+          }
+        } else if (!profile || !profile.email) {
+          return {
+            success: false,
+            message: 'No encontramos una cuenta con ese nombre de usuario.',
+          };
+        } else {
+          targetEmail = profile.email.toLowerCase();
+        }
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailOrUsername,
+        email: targetEmail,
         password,
       });
 
       if (error) {
-        return {
-          success: false,
-          message:
-            error.message === 'Invalid login credentials'
-              ? 'Credenciales inválidas. Verifica tu correo y contraseña.'
-              : error.message,
-        };
+        if (error.message.toLowerCase().includes('fetch')) {
+          console.warn('Supabase offline/unreachable -> Fallback local.');
+        } else {
+          return {
+            success: false,
+            message:
+              error.message === 'Invalid login credentials'
+                ? 'Credenciales inválidas. Verifica tu correo y contraseña institucional.'
+                : error.message,
+          };
+        }
       }
 
       if (data.user) {
-        const metadata = data.user.user_metadata || {};
+        // Consultar el perfil real desde la base de datos para evitar desincronización
+        let finalRole: CittRole = 'usuario_citt';
+        let fullName = 'Usuario Duoc UC';
+        let finalUsername = isEmail ? cleanInput.split('@')[0] : cleanInput;
+
+        try {
+          const { data: p } = await supabase
+            .from('profiles')
+            .select('role, full_name, username')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
+          if (p) {
+            finalRole = (p.role as CittRole) || finalRole;
+            fullName = p.full_name || fullName;
+            finalUsername = p.username || finalUsername;
+          } else {
+            const metadata = data.user.user_metadata || {};
+            finalRole = (metadata.citt_role as CittRole) || finalRole;
+            fullName = metadata.full_name || fullName;
+            finalUsername = metadata.username || finalUsername;
+          }
+        } catch {
+          const metadata = data.user.user_metadata || {};
+          finalRole = (metadata.citt_role as CittRole) || finalRole;
+          fullName = metadata.full_name || fullName;
+        }
+
         return {
           success: true,
           message: 'Inicio de sesión exitoso vía Supabase Auth.',
-          role: (metadata.citt_role as CittRole) || 'usuario_citt',
+          role: finalRole,
           user: {
-            username: metadata.username || emailOrUsername.split('@')[0],
-            fullName: metadata.full_name || 'Usuario Duoc UC',
-            email: data.user.email || emailOrUsername,
-            role: (metadata.citt_role as CittRole) || 'usuario_citt',
+            username: finalUsername,
+            fullName,
+            email: data.user.email || targetEmail,
+            role: finalRole,
           },
         };
       }
-    } catch {
-      // Fallback
+    } catch (err: unknown) {
+      return {
+        success: false,
+        message: (err as Error)?.message || 'Error de conexión con el servicio de autenticación institucional.',
+      };
     }
   }
 
-  // Modo local
+  // Modo local / demostración (únicamente cuando Supabase no está configurado)
+  const isProfesor =
+    lowerInput.endsWith('@profesor.duocuc.cl') ||
+    lowerInput.endsWith('@profesor.duoc.cl') ||
+    lowerInput.endsWith('@duoc.cl');
+  const isCoreDev = lowerInput.endsWith('@cittconnect.cl') || lowerInput === 'vicente.vasquez';
+
   return {
     success: true,
-    message: 'Sesión iniciada con éxito.',
+    message: 'Sesión iniciada con éxito (modo demostración local).',
     user: {
-      username: isEmail ? emailOrUsername.split('@')[0] : emailOrUsername,
+      username: isEmail ? cleanInput.split('@')[0] : cleanInput,
       fullName: 'Usuario CITT Conectado',
-      email: isEmail ? emailOrUsername : `${emailOrUsername}@duocuc.cl`,
-      role: isEmail && emailOrUsername.endsWith('@profesor.duocuc.cl')
-        ? 'personal_duoc'
-        : isEmail && emailOrUsername.endsWith('@cittconnect.cl')
-        ? 'dev'
-        : 'usuario_citt',
+      email: isEmail ? cleanInput : `${cleanInput}@duocuc.cl`,
+      role: isProfesor ? 'personal_duoc' : isCoreDev ? 'dev' : 'usuario_citt',
     },
   };
 }

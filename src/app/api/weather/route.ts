@@ -223,7 +223,10 @@ export async function GET() {
       try {
         const res = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${sede.lat}&longitude=${sede.lon}&current_weather=true`,
-          { next: { revalidate: 1800 } }
+          {
+            next: { revalidate: 1800 },
+            signal: AbortSignal.timeout(2500),
+          }
         );
         if (res.ok) {
           const data = await res.json();

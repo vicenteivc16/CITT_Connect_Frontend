@@ -26,14 +26,26 @@ import {
   getSupabaseActivities,
   enrollInSupabaseActivity,
   unenrollFromSupabaseActivity,
+  promoteWaitingListUserInSupabase,
   createSupabaseActivity,
   updateSupabaseActivityStatus,
 } from '@/lib/supabase/activities';
-import { getSupabaseProfiles } from '@/lib/supabase/profiles';
+import { getSupabaseProfiles, updateSupabaseProfile } from '@/lib/supabase/profiles';
 import {
   getSupabaseProjects,
   createSupabaseProject,
+  updateSupabaseProject,
 } from '@/lib/supabase/projects';
+import {
+  getSupabaseConnections,
+  createSupabaseConnectionRequest,
+  updateSupabaseConnectionStatus,
+  deleteSupabaseConnection,
+} from '@/lib/supabase/connections';
+import {
+  createSupabaseProjectApplication,
+  updateSupabaseProjectApplicationStatus,
+} from '@/lib/supabase/applications';
 import { supabase } from '@/lib/supabase/client';
 
 interface CittNetworkContextValue {
@@ -233,13 +245,23 @@ export function CittNetworkProvider({
 
     getSupabaseProfiles()
       .then((supabaseProfiles) => {
-        setProfiles(supabaseProfiles);
-        try {
-          localStorage.setItem(
-            STORAGE_KEYS.PROFILES,
-            JSON.stringify(supabaseProfiles)
-          );
-        } catch {}
+        if (supabaseProfiles && supabaseProfiles.length > 0) {
+          setProfiles((prev) => {
+            const merged = [...supabaseProfiles];
+            prev.forEach((localP) => {
+              if (!merged.some((sp) => sp.id === localP.id || sp.username === localP.username)) {
+                merged.push(localP);
+              }
+            });
+            try {
+              localStorage.setItem(
+                STORAGE_KEYS.PROFILES,
+                JSON.stringify(merged)
+              );
+            } catch {}
+            return merged;
+          });
+        }
       })
       .catch((err) => console.warn('Supabase profiles sync fallback:', err));
 
@@ -327,6 +349,35 @@ export function CittNetworkProvider({
     }
   };
 
+  // Sincronización de solicitudes de conexión bilaterales con Supabase
+  useEffect(() => {
+    if (activeUser?.id || activeUsername) {
+      const lookup = activeUser?.id || activeUsername || '';
+      getSupabaseConnections(lookup)
+        .then((cloudConnections) => {
+          if (cloudConnections && cloudConnections.length > 0) {
+            setConnectionRequests((prev) => {
+              const merged = [...cloudConnections];
+              prev.forEach((localConn) => {
+                if (
+                  !merged.some(
+                    (c) =>
+                      c.requesterId === localConn.requesterId &&
+                      c.receiverId === localConn.receiverId
+                  )
+                ) {
+                  merged.push(localConn);
+                }
+              });
+              persistConnectionRequests(merged);
+              return merged;
+            });
+          }
+        })
+        .catch((err) => console.warn('Supabase connections sync fallback:', err));
+    }
+  }, [activeUser?.id, activeUsername]);
+
   // Bilateral connection logic
   const getConnectionStatus = (targetMemberId: string): ConnectionStatus => {
     if (!isAuthenticated || !activeUser) return 'none';
@@ -380,6 +431,9 @@ export function CittNetworkProvider({
 
     const next = [...connectionRequests, newRequest];
     persistConnectionRequests(next);
+    createSupabaseConnectionRequest(activeUser.id, targetMemberId).catch((err) =>
+      console.warn('Supabase connection request sync fallback:', err)
+    );
     return { success: true, message: 'Solicitud de conexión enviada con éxito.' };
   };
 
@@ -396,6 +450,9 @@ export function CittNetworkProvider({
       return r;
     });
     persistConnectionRequests(next);
+    updateSupabaseConnectionStatus(requesterMemberId, activeUser.id, 'accepted').catch((err) =>
+      console.warn('Supabase accept connection sync fallback:', err)
+    );
   };
 
   const rejectOrCancelConnection = (targetMemberId: string) => {
@@ -408,6 +465,9 @@ export function CittNetworkProvider({
         )
     );
     persistConnectionRequests(next);
+    deleteSupabaseConnection(activeUser.id, targetMemberId).catch((err) =>
+      console.warn('Supabase delete connection sync fallback:', err)
+    );
   };
 
   const incomingConnectionRequests = isAuthenticated
@@ -537,6 +597,11 @@ export function CittNetworkProvider({
         return next;
       });
     }
+
+    // Persistir perfil editado en base de datos Supabase
+    updateSupabaseProfile(updated).catch((err) =>
+      console.warn('Supabase profile update sync:', err)
+    );
   };
 
   const registerMember = (newProfile: CittMemberProfile) => {
@@ -718,6 +783,19 @@ export function CittNetworkProvider({
       return next;
     });
 
+    createSupabaseProjectApplication({
+      projectId: targetProject.id,
+      applicantUsername: activeUser.username,
+      applicantName: activeUser.fullName,
+      applicantEmail: activeUser.email,
+      applicantRole: activeUser.role,
+      applicantCampusSlug: activeUser.campusSlug,
+      applicantSchoolSlug: activeUser.schoolSlug,
+      status: 'pending',
+      answers: appData.answers,
+      note: appData.note,
+    }).catch((err) => console.warn('Supabase application sync fallback:', err));
+
     return {
       success: true,
       message:
@@ -816,6 +894,21 @@ export function CittNetworkProvider({
       return next;
     });
 
+    if (applicantData) {
+      updateSupabaseProjectApplicationStatus(
+        projectId,
+        applicantData.applicantUsername,
+        'accepted'
+      ).catch((err) => console.warn('Supabase approve application sync fallback:', err));
+
+      const targetProj = projects.find((p) => p.id === projectId || p.slug === projectId);
+      if (targetProj) {
+        updateSupabaseProject(targetProj.id, targetProj).catch((err) =>
+          console.warn('Supabase update project collaborators fallback:', err)
+        );
+      }
+    }
+
     return {
       success: true,
       message: '¡Postulante aprobado y sumado oficialmente al equipo de proyecto!',
@@ -826,6 +919,12 @@ export function CittNetworkProvider({
     projectId: string,
     applicationId: string
   ): { success: boolean; message: string } => {
+    updateSupabaseProjectApplicationStatus(
+      projectId,
+      applicationId,
+      'rejected'
+    ).catch((err) => console.warn('Supabase reject application sync fallback:', err));
+
     setProjects((prev) => {
       const next = prev.map((proj) => {
         if (proj.id === projectId || proj.slug === projectId) {
@@ -1085,27 +1184,32 @@ export function CittNetworkProvider({
       return { success: false, message: 'La actividad solicitada no existe.' };
     }
 
-    if (activity.enrolledUsernames.includes(activeUsername)) {
+    const enrolled = activity.enrolledUsernames || [];
+    if (enrolled.includes(activeUsername)) {
       return {
         success: false,
         message: 'Ya estás inscrito oficialmente en esta actividad.',
       };
     }
 
-    const isFull = activity.enrolledUsernames.length >= activity.totalSeats;
+    const totalSeats = activity.totalSeats ?? activity.capacityPerSession ?? 20;
+    const isFull = enrolled.length >= totalSeats;
     const updatedActivities = activities.map((act) => {
       if (act.id !== activityId) return act;
+      const actEnrolled = act.enrolledUsernames || [];
       if (isFull) {
         const currentWaiting = act.waitingListUsernames || [];
         if (currentWaiting.includes(activeUsername)) return act;
         return {
           ...act,
+          enrolledUsernames: actEnrolled,
           waitingListUsernames: [...currentWaiting, activeUsername],
         };
       }
       return {
         ...act,
-        enrolledUsernames: [...act.enrolledUsernames, activeUsername],
+        enrolledUsernames: [...actEnrolled, activeUsername],
+        waitingListUsernames: act.waitingListUsernames || [],
       };
     });
 
@@ -1145,24 +1249,30 @@ export function CittNetworkProvider({
       return { success: false, message: 'Debes iniciar sesión.' };
     }
 
+    let userToPromote: string | null = null;
+
     const updatedActivities = activities.map((act) => {
       if (act.id !== activityId) return act;
 
-      const remainingEnrolled = act.enrolledUsernames.filter(
+      const actEnrolled = act.enrolledUsernames || [];
+      const wasEnrolled = actEnrolled.includes(activeUsername);
+      const remainingEnrolled = actEnrolled.filter(
         (u) => u !== activeUsername
       );
       const remainingWaiting = (act.waitingListUsernames || []).filter(
         (u) => u !== activeUsername
       );
 
+      const actTotalSeats = act.totalSeats ?? act.capacityPerSession ?? 20;
       if (
+        wasEnrolled &&
         remainingWaiting.length > 0 &&
-        remainingEnrolled.length < act.totalSeats
+        remainingEnrolled.length < actTotalSeats
       ) {
-        const promotedUser = remainingWaiting[0];
+        userToPromote = remainingWaiting[0];
         return {
           ...act,
-          enrolledUsernames: [...remainingEnrolled, promotedUser],
+          enrolledUsernames: [...remainingEnrolled, userToPromote],
           waitingListUsernames: remainingWaiting.slice(1),
         };
       }
@@ -1188,6 +1298,13 @@ export function CittNetworkProvider({
     unenrollFromSupabaseActivity(activityId, activeUsername).catch((err) =>
       console.warn('Supabase unenrollment sync:', err)
     );
+
+    // Sincronizar confirmación de usuario promovido en Supabase
+    if (userToPromote) {
+      promoteWaitingListUserInSupabase(activityId, userToPromote).catch((err) =>
+        console.warn('Supabase promotion sync:', err)
+      );
+    }
 
     return {
       success: true,
