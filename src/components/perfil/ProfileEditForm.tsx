@@ -18,6 +18,7 @@ import {
 import { CittMemberProfile, DuocSchoolSlug } from '@/types/citt';
 import { ProfileBannersSelector } from './ProfileBannersSelector';
 import { ProfileSocialLinksForm } from './ProfileSocialLinksForm';
+import { LinkedInSectionEditor } from './LinkedInSectionEditor';
 
 function ensureHttpUrl(url?: string): string {
   if (!url) return '';
@@ -453,6 +454,12 @@ export function ProfileEditForm({
           ))}
         </div>
       </div>
+
+      {/* Integración y Actividad en LinkedIn */}
+      <LinkedInSectionEditor
+        profile={formState}
+        onChange={(updated) => setFormState((prev) => ({ ...prev, ...updated }))}
+      />
 
       {/* Contacto & Redes Sociales */}
       <ProfileSocialLinksForm

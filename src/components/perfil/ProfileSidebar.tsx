@@ -4,6 +4,7 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   ArrowUpRight,
+  CheckCircle2,
   Copy,
   Download,
   Github,
@@ -60,18 +61,31 @@ export function ProfileSidebar({
           </a>
 
           {member.linkedinUrl && (
-            <a
-              href={member.linkedinUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between gap-3 py-3 text-xs font-bold text-theme-primary transition hover:text-[#307FE2]"
-            >
-              <span className="inline-flex items-center gap-2.5">
-                <Linkedin className="h-4 w-4 shrink-0 text-[#307FE2]" />
-                <span>Perfil Profesional en LinkedIn</span>
-              </span>
-              <ArrowUpRight className="h-4 w-4 shrink-0 text-theme-secondary" />
-            </a>
+            <div className="py-3 first:pt-0">
+              <a
+                href={member.linkedinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-3 text-xs font-bold text-theme-primary transition hover:text-[#0A66C2]"
+              >
+                <span className="inline-flex items-center gap-2.5">
+                  <Linkedin className="h-4 w-4 shrink-0 text-[#0A66C2]" />
+                  <span>Perfil en LinkedIn</span>
+                  {member.linkedinVerified && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-500">
+                      <CheckCircle2 className="h-2.5 w-2.5" />
+                      Verificado
+                    </span>
+                  )}
+                </span>
+                <ArrowUpRight className="h-4 w-4 shrink-0 text-theme-secondary" />
+              </a>
+              {member.linkedinHeadline && (
+                <p className="mt-1 pl-6 text-[11px] text-theme-secondary line-clamp-2">
+                  {member.linkedinHeadline}
+                </p>
+              )}
+            </div>
           )}
 
           {member.githubUrl && (

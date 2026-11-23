@@ -247,9 +247,21 @@ export function CittNetworkProvider({
       .then((supabaseProfiles) => {
         if (supabaseProfiles && supabaseProfiles.length > 0) {
           setProfiles((prev) => {
-            const merged = [...supabaseProfiles];
+            const merged = supabaseProfiles.map((sp) => {
+              const localMatch = prev.find(
+                (lp) => lp.id === sp.id || lp.username === sp.username
+              );
+              if (localMatch) {
+                return {
+                  ...sp,
+                  ...localMatch,
+                  id: sp.id || localMatch.id,
+                };
+              }
+              return sp;
+            });
             prev.forEach((localP) => {
-              if (!merged.some((sp) => sp.id === localP.id || sp.username === localP.username)) {
+              if (!merged.some((mp) => mp.id === localP.id || mp.username === localP.username)) {
                 merged.push(localP);
               }
             });
@@ -513,9 +525,9 @@ export function CittNetworkProvider({
   const updateActiveUserProfile = (updated: CittMemberProfile) => {
     const oldUsername = activeUser.username;
     setProfiles((prev) => {
-      const exists = prev.some((p) => p.id === updated.id);
+      const exists = prev.some((p) => p.id === updated.id || p.username === updated.username);
       const next = exists
-        ? prev.map((p) => (p.id === updated.id ? updated : p))
+        ? prev.map((p) => (p.id === updated.id || p.username === updated.username ? updated : p))
         : [updated, ...prev];
       try {
         localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(next));

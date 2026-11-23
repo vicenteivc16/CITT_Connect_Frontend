@@ -12,6 +12,7 @@ import {
   Compass,
   FolderGit2,
   Github,
+  Linkedin,
   MapPin,
   Newspaper,
   Sparkles,
@@ -26,6 +27,7 @@ import {
   CittActivity,
 } from '@/types/citt';
 import { RoleBadge, SchoolBadge } from '@/components/RoleBadge';
+import { LinkedInPostCard } from './LinkedInPostCard';
 
 const STATUS_LABELS: Record<
   'idea' | 'en_desarrollo' | 'prototipo' | 'finalizado',
@@ -310,6 +312,42 @@ export function ProfileMainContent({
                 </div>
               );
             })}
+          </div>
+        </section>
+      )}
+
+      {/* Bloque: Publicaciones y Logros Destacados en LinkedIn */}
+      {member.linkedinPosts && member.linkedinPosts.length > 0 && (
+        <section className="rounded-3xl border border-theme bg-theme-surface p-6 shadow-theme-card sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="inline-flex items-center gap-2.5 text-xl font-black text-theme-primary">
+                <Linkedin className="h-5 w-5 text-[#0A66C2]" />
+                <span>Actividad y Logros en LinkedIn</span>
+              </h2>
+              <p className="mt-1 text-xs text-theme-secondary">
+                Publicaciones, hitos profesionales y proyectos compartidos en la red profesional.
+              </p>
+            </div>
+
+            {member.linkedinUrl && (
+              <a
+                href={member.linkedinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0A66C2]/10 px-3.5 py-2 text-xs font-bold text-[#0A66C2] transition hover:bg-[#0A66C2] hover:text-white"
+              >
+                <Linkedin className="h-3.5 w-3.5" />
+                <span>Ver Perfil Completo</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {member.linkedinPosts.map((post) => (
+              <LinkedInPostCard key={post.id} post={post} />
+            ))}
           </div>
         </section>
       )}

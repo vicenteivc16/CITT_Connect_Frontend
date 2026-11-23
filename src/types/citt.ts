@@ -40,6 +40,15 @@ export interface CittBannerPreset {
   imageUrl: string;
 }
 
+export interface LinkedInFeaturedPost {
+  id: string;
+  url: string;
+  title?: string;
+  summary?: string;
+  publishedAt?: string;
+  authorName?: string;
+}
+
 export interface CittMemberProfile {
   id: string;
   username: string;
@@ -53,6 +62,12 @@ export interface CittMemberProfile {
   campusSlug: string;
   schoolSlug: DuocSchoolSlug;
   linkedinUrl?: string;
+  linkedinId?: string;
+  linkedinAvatarUrl?: string;
+  linkedinHeadline?: string;
+  linkedinSyncAvatar?: boolean;
+  linkedinVerified?: boolean;
+  linkedinPosts?: LinkedInFeaturedPost[];
   githubUrl?: string;
   portfolioUrl?: string;
   instagramUrl?: string;
