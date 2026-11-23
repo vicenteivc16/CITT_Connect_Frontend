@@ -21,7 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_origin_campus ON public.projects (origin
 CREATE INDEX IF NOT EXISTS idx_projects_created_desc ON public.projects (created_at DESC);
 
 -- 4. Reservas de Salas y Tótems
-CREATE INDEX IF NOT EXISTS idx_reservations_room_date ON public.reservations (room_id, date);
+CREATE INDEX IF NOT EXISTS idx_reservations_room_date ON public.reservations (room, reservation_date);
 CREATE INDEX IF NOT EXISTS idx_reservations_campus_status ON public.reservations (campus, status);
 CREATE INDEX IF NOT EXISTS idx_reservations_totem ON public.reservations (totem_token);
 
