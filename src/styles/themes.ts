@@ -117,22 +117,22 @@ export const CITT_THEMES: Record<ThemeMode, CittThemeTokens> = {
   dark: {
     name: 'dark',
     label: 'Modo Oscuro (Paleta Secundaria Duoc UC)',
-    bgCanvas: '#000000',      // Terciario Negro — Paleta Secundaria (Capa 1: Lienzo)
-    bgSection: '#121212',     // Capa 2: Secciones en Modo Oscuro
-    bgSurface: '#1A1A1A',     // Negro Duoc — Paleta Primaria (Capa 3: Tarjetas sobre #000000)
-    bgSubtle: '#141414',      // Paneles de filtros en Modo Oscuro
-    bgElevated: '#000000',    // Chips e inputs dentro de tarjetas #1A1A1A
+    bgCanvas: '#0D0D0D',      // Lienzo L0 en Modo Oscuro (suave, sin negro absoluto)
+    bgSection: '#141414',     // Capa L1: Secciones y contenedores
+    bgSurface: '#1A1A1A',     // Negro Duoc Oficial — Superficie L2 (Tarjetas sobre fondo oscuro)
+    bgSubtle: '#161616',      // Paneles y filtros
+    bgElevated: '#242424',    // Capa L3: Chips, inputs y botones secundarios dentro de tarjetas
     bgInverse: '#FFFFFF',     // Blanco — Paleta Primaria
-    badgeBg: '#1A1A1A',       // RoleBadge en Modo Oscuro
-    badgeText: '#FFFFFF',     // Texto Blanco sobre #1A1A1A (17.4:1)
-    badgeBorder: 'rgba(238, 238, 238, 0.24)',
-    textPrimary: '#FFFFFF',   // Blanco — Paleta Primaria (21:1 sobre #000000)
-    textSecondary: '#EEEEEE', // Neutro — Paleta Secundaria (15.4:1 sobre #1A1A1A)
+    badgeBg: '#222222',       // RoleBadge en Modo Oscuro
+    badgeText: '#F4F4F5',     // Texto Zinc-100 de alta legibilidad
+    badgeBorder: 'rgba(255, 255, 255, 0.10)',
+    textPrimary: '#FFFFFF',   // Blanco — Paleta Primaria (17.4:1 sobre #1A1A1A)
+    textSecondary: '#A1A1AA', // Zinc-400 — Legibilidad descansada sin deslumbramiento (7.1:1 AAA)
     textInverse: '#1A1A1A',   // Negro Duoc sobre #FFFFFF / #FFB800
     accentPrimary: '#FFB800', // Amarillo Duoc — Paleta Primaria
     accentBlue: '#307FE2',    // Azul Emblema CITT / Escuela Informática
-    borderSubtle: 'rgba(238, 238, 238, 0.16)',
-    borderStrong: 'rgba(238, 238, 238, 0.32)',
+    borderSubtle: 'rgba(255, 255, 255, 0.08)',
+    borderStrong: 'rgba(255, 255, 255, 0.15)',
   },
 };
 

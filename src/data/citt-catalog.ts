@@ -129,9 +129,9 @@ export const ROLE_CONFIG: Record<CittRole, RoleConfigItem> = {
     description:
       'Integrante activo de la comunidad CITT perteneciente a cualquiera de las escuelas de Duoc UC.',
     accentHex: '#EEEEEE',
-    badgeBg: 'rgba(238, 238, 238, 0.1)',
-    badgeText: '#EEEEEE',
-    badgeBorder: 'rgba(238, 238, 238, 0.28)',
+    badgeBg: 'rgba(255, 255, 255, 0.08)',
+    badgeText: '#F4F4F5',
+    badgeBorder: 'rgba(255, 255, 255, 0.12)',
   },
 };
 
