@@ -133,7 +133,8 @@ export async function updateSupabaseProfile(
         is_open_to_collaborate: profile.isOpenToCollaborate,
         updated_at: new Date().toISOString(),
       })
-      .eq('username', profile.username);
+      .eq('username', profile.username)
+      .select();
 
     if (error) {
       console.warn('Supabase update profile error:', error.message);

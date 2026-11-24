@@ -247,20 +247,36 @@ export function CittNetworkProvider({
       .then((supabaseProfiles) => {
         if (supabaseProfiles && supabaseProfiles.length > 0) {
           setProfiles((prev) => {
+            let localList = prev;
+            if (localList.length === 0) {
+              try {
+                const raw = localStorage.getItem(STORAGE_KEYS.PROFILES);
+                if (raw) localList = JSON.parse(raw);
+              } catch {}
+            }
             const merged = supabaseProfiles.map((sp) => {
-              const localMatch = prev.find(
+              const localMatch = localList.find(
                 (lp) => lp.id === sp.id || lp.username === sp.username
               );
               if (localMatch) {
                 return {
                   ...sp,
                   ...localMatch,
+                  linkedinUrl: sp.linkedinUrl || localMatch.linkedinUrl,
+                  linkedinVerified: sp.linkedinVerified ?? localMatch.linkedinVerified,
+                  linkedinId: sp.linkedinId || localMatch.linkedinId,
+                  linkedinAvatarUrl: sp.linkedinAvatarUrl || localMatch.linkedinAvatarUrl,
+                  linkedinHeadline: sp.linkedinHeadline || localMatch.linkedinHeadline,
+                  linkedinPosts:
+                    sp.linkedinPosts && sp.linkedinPosts.length > 0
+                      ? sp.linkedinPosts
+                      : localMatch.linkedinPosts || [],
                   id: sp.id || localMatch.id,
                 };
               }
               return sp;
             });
-            prev.forEach((localP) => {
+            localList.forEach((localP) => {
               if (!merged.some((mp) => mp.id === localP.id || mp.username === localP.username)) {
                 merged.push(localP);
               }

@@ -54,6 +54,30 @@ export function ProfileEditForm({
   };
 
   useEffect(() => {
+    setFormState(initialProfile);
+  }, [
+    initialProfile.id,
+    initialProfile.username,
+    initialProfile.linkedinVerified,
+    initialProfile.linkedinUrl,
+    initialProfile.linkedinHeadline,
+    initialProfile.linkedinAvatarUrl,
+    initialProfile.avatarUrl,
+  ]);
+
+  const handleInstantLinkedInSave = (patch: Partial<CittMemberProfile>) => {
+    const nextProfile: CittMemberProfile = {
+      ...formState,
+      ...patch,
+      linkedinUrl: patch.linkedinUrl !== undefined ? ensureHttpUrl(patch.linkedinUrl) : ensureHttpUrl(formState.linkedinUrl),
+    };
+    setFormState(nextProfile);
+    onSaveProfile(nextProfile);
+    setSavedNotice(true);
+    setTimeout(() => setSavedNotice(false), 2600);
+  };
+
+  useEffect(() => {
     onProfileStateChange?.(formState);
   }, [formState, onProfileStateChange]);
 
@@ -459,6 +483,7 @@ export function ProfileEditForm({
       <LinkedInSectionEditor
         profile={formState}
         onChange={(updated) => setFormState((prev) => ({ ...prev, ...updated }))}
+        onSaveInstant={handleInstantLinkedInSave}
       />
 
       {/* Contacto & Redes Sociales */}
